@@ -51,6 +51,12 @@ func languageInlineKeyboard() tgbotapi.InlineKeyboardMarkup {
 	keyboard := tgbotapi.NewInlineKeyboardMarkup(
 		tgbotapi.NewInlineKeyboardRow(
 			tgbotapi.NewInlineKeyboardButtonData("Dutch", "language:Dutch"),
+			tgbotapi.NewInlineKeyboardButtonData("French", "language:French"),
+			tgbotapi.NewInlineKeyboardButtonData("German", "language:German"),
+		),
+		tgbotapi.NewInlineKeyboardRow(
+			tgbotapi.NewInlineKeyboardButtonData("Estonian", "language:Estonian"),
+			tgbotapi.NewInlineKeyboardButtonData("Spanish", "language:Spanish"),
 			tgbotapi.NewInlineKeyboardButtonData("Russian", "language:Russian"),
 		),
 	)

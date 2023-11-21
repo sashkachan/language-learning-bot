@@ -46,6 +46,17 @@ func main() {
 	}
 	defer db.Close()
 
+	// load the contents of scripts/init_db.sql into a string
+	initDBSQL, err := os.ReadFile("scripts/init_db.sql")
+	if err != nil {
+		log.Fatal(err)
+	}
+	// execute the SQL query
+	_, err = db.Exec(string(initDBSQL))
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	// allowed telegram users ids
 	allowedUsers := []int64{}
 	allowedUsersStr := os.Getenv("ALLOWED_TELEGRAM_USER_IDS")
