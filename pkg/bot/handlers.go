@@ -132,8 +132,15 @@ func HandleMessage(bot *tgbotapi.BotAPI, message *tgbotapi.Message, openaiClient
 
 // IsAllowedUser checks if user is allowed to use bot
 func IsAllowedUser(update tgbotapi.Update, allowedUsers []int64) bool {
-	// check if user is allowed to use bot
-	userID := update.Message.From.ID
+	// check if user is allowed to use bot. Try update.Message.From.ID first, then update.CallbackQuery.From.ID
+	var userID int64
+	if update.Message != nil {
+		userID = update.Message.From.ID
+	} else if update.CallbackQuery != nil {
+		userID = update.CallbackQuery.From.ID
+	} else {
+		return false
+	}
 	for _, allowedUser := range allowedUsers {
 		if userID == allowedUser {
 			return true
