@@ -128,5 +128,16 @@ func HandleMessage(bot *tgbotapi.BotAPI, message *tgbotapi.Message, openaiClient
 	if err != nil {
 		log.Printf("Error sending GPT response: %v\n", err)
 	}
+}
 
+// IsAllowedUser checks if user is allowed to use bot
+func IsAllowedUser(update tgbotapi.Update, allowedUsers []int64) bool {
+	// check if user is allowed to use bot
+	userID := update.Message.From.ID
+	for _, allowedUser := range allowedUsers {
+		if userID == allowedUser {
+			return true
+		}
+	}
+	return false
 }

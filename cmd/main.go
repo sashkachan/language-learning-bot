@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"log"
 	"os"
+	"strconv"
+	"strings"
 
 	bot "language-learning-bot/pkg/bot"
 
@@ -44,6 +46,19 @@ func main() {
 	}
 	defer db.Close()
 
+	// allowed telegram users ids
+	allowedUsers := []int64{}
+	allowedUsersStr := os.Getenv("ALLOWED_TELEGRAM_USER_IDS")
+	// split string by comma
+	for _, id := range strings.Split(allowedUsersStr, ",") {
+		// convert string to int64
+		allowedUser, err := strconv.ParseInt(id, 10, 64)
+		if err != nil {
+			log.Fatal(err)
+		}
+		allowedUsers = append(allowedUsers, allowedUser)
+	}
+
 	// Start listening for updates
 	u := tgbotapi.NewUpdate(0)
 	u.Timeout = 60
@@ -53,6 +68,11 @@ func main() {
 	// Handle updates (commands, messages)
 	for update := range updates {
 		pretty_print(update)
+		// check if user is allowed to use bot
+		if !bot.IsAllowedUser(update, allowedUsers) {
+			log.Printf("User %d is not allowed to use bot", update.Message.From.ID)
+			continue
+		}
 		if update.Message != nil {
 			if update.Message.IsCommand() {
 				bot.HandleCommand(tgbot, update.Message)
@@ -63,4 +83,15 @@ func main() {
 			bot.HandleCallbackQuery(tgbot, update.CallbackQuery, db)
 		}
 	}
+}
+
+func IsAllowedUser(update tgbotapi.Update, allowedUsers []int64) bool {
+	// check if user is allowed to use bot
+	userID := update.Message.From.ID
+	for _, allowedUser := range allowedUsers {
+		if userID == allowedUser {
+			return true
+		}
+	}
+	return false
 }
