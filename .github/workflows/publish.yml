@@ -2,8 +2,12 @@
 name: Publish Docker image
 
 on:
-  release:
-    types: [published]
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
 
 jobs:
   push_to_registries:
@@ -42,5 +46,5 @@ jobs:
           context: .
           platforms: linux/amd64,linux/arm64
           push: true
-          tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+          tags: ${{ github.sha }},${{ steps.meta.outputs.tags }}
