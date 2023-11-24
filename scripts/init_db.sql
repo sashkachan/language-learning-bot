@@ -3,7 +3,8 @@
 -- Users Table
 CREATE TABLE IF NOT EXISTS users (
     id INTEGER PRIMARY KEY,
-    language TEXT NOT NULL
+    language TEXT NOT NULL,
+    help_type TEXT NOT NULL
 );
 
 -- Queries Table

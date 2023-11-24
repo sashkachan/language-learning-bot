@@ -35,6 +35,15 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	tgbotConfig := tgbotapi.NewSetMyCommands(
+		tgbotapi.BotCommand{Command: "start", Description: "Configure the preferred language"},
+		tgbotapi.BotCommand{Command: "translation", Description: "Provide translation of a phrase or a word"},
+		tgbotapi.BotCommand{Command: "examples", Description: "Provide 3-4 examples of a word or a phrase"},
+	)
+	_, err = tgbot.Request(tgbotConfig)
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	// Initialize OpenAI Client
 	openaiClient := openai.NewClient(os.Getenv("OPENAI_API_TOKEN"))
@@ -53,6 +62,10 @@ func main() {
 	}
 	// execute the SQL query
 	_, err = db.Exec(string(initDBSQL))
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -78,7 +91,7 @@ func main() {
 	log.Println("Running...")
 	// Handle updates (commands, messages)
 	for update := range updates {
-		pretty_print(update)
+		// pretty_print(update)
 		// check if user is allowed to use bot
 		if !bot.IsAllowedUser(update, allowedUsers) {
 			log.Printf("User %d is not allowed to use bot", update.Message.From.ID)
@@ -86,7 +99,7 @@ func main() {
 		}
 		if update.Message != nil {
 			if update.Message.IsCommand() {
-				bot.HandleCommand(tgbot, update.Message)
+				bot.HandleCommand(tgbot, update.Message, db)
 			} else {
 				bot.HandleMessage(tgbot, update.Message, openaiClient, db)
 			}

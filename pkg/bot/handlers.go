@@ -15,36 +15,61 @@ import (
 	"github.com/sashabaranov/go-openai"
 )
 
-// ... [imports] ...
-
-func HandleCommand(bot *tgbotapi.BotAPI, message *tgbotapi.Message) {
+func HandleCommand(bot *tgbotapi.BotAPI, message *tgbotapi.Message, db *sql.DB) error {
+	// log the command to the console
+	log.Printf("%d [%s] %s", message.From.ID, message.From.UserName, message.Text)
+	response := ""
 	switch message.Command() {
 	case "start":
-		// ... [handle start command] ...
-		sendLanguageSelection(bot, message.Chat.ID)
+		if err := sendLanguageSelection(bot, message.Chat.ID); err != nil {
+			log.Printf("Error sending language selection: %v\n", err)
+			return err
+		}
+		response = ""
 
-	case "settings":
-		// ... [handle settings command] ...
+	case "examples":
+		if err := storage.UpdateUserHelpType(db, int(message.From.ID), "examples"); err != nil {
+			log.Printf("Error updating user help type: %v\n", err)
+			return err
+		}
+		response = "I will respond with examples of the word or phrase usage."
+
+	case "translation":
+		if err := storage.UpdateUserHelpType(db, int(message.From.ID), "translation"); err != nil {
+			log.Printf("Error updating user help type: %v\n", err)
+			return err
+		}
+		response = "I will respond with translations."
 	}
+	// send the response to the user
+	if response != "" {
+		msg := tgbotapi.NewMessage(message.Chat.ID, response)
+		_, err := bot.Send(msg)
+		if err != nil {
+			log.Printf("Error sending response: %v\n", err)
+			return err
+		}
+	}
+	return nil
 }
 
 func HandleCallbackQuery(bot *tgbotapi.BotAPI, callbackQuery *tgbotapi.CallbackQuery, db *sql.DB) {
-	// ... [callback query handling logic] ...
 	data := callbackQuery.Data
 	if strings.HasPrefix(data, "language:") {
 		language := strings.Split(data, ":")[1]
 		updateLanguagePreference(bot, callbackQuery, db, language)
-		// ...
 	}
 }
 
-func sendLanguageSelection(bot *tgbotapi.BotAPI, chatID int64) {
+func sendLanguageSelection(bot *tgbotapi.BotAPI, chatID int64) error {
 	msg := tgbotapi.NewMessage(chatID, "Please choose a language:")
 	msg.ReplyMarkup = languageInlineKeyboard()
 	_, err := bot.Send(msg)
 	if err != nil {
 		log.Printf("Error sending language selection: %v\n", err)
+		return err
 	}
+	return nil
 }
 
 func languageInlineKeyboard() tgbotapi.InlineKeyboardMarkup {
@@ -122,7 +147,6 @@ func HandleMessage(bot *tgbotapi.BotAPI, message *tgbotapi.Message, openaiClient
 	ctx := context.Background()
 
 	gptresponse, err := openai_api.GetGPTResponse(ctx, openaiClient, gptPrompt.String())
-
 	if err != nil {
 		log.Printf("Error getting GPT response: %v\n", err)
 		return

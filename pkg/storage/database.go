@@ -5,12 +5,12 @@ import "database/sql"
 func UpdateUserLanguage(db *sql.DB, userID int, language string) error {
 	// SQL query for upsert operation
 	query := `
-    INSERT INTO users (id, language)
-    VALUES (?, ?)
+    INSERT INTO users (id, language, help_type)
+    VALUES (?, ?, ?)
     ON CONFLICT(id)
     DO UPDATE SET language = EXCLUDED.language;
     `
-	_, err := db.Exec(query, userID, language)
+	_, err := db.Exec(query, userID, language, "")
 	if err != nil {
 		return err
 	}
@@ -27,4 +27,16 @@ func GetUserLanguage(db *sql.DB, userID int) (string, error) {
 		return "", err
 	}
 	return language, nil
+}
+
+func UpdateUserHelpType(db *sql.DB, userID int, helpType string) error {
+	query := `
+    UPDATE users SET help_type = ?
+    WHERE id = ?;
+    `
+	_, err := db.Exec(query, helpType, userID)
+	if err != nil {
+		return err
+	}
+	return nil
 }
