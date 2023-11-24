@@ -5,9 +5,9 @@ on:
   push:
     branches:
       - main
-  pull_request:
-    branches:
-      - main
+
+  release:
+    types: [published]
 
 jobs:
   push_to_registries:
@@ -39,6 +39,12 @@ jobs:
         with:
           images: |
             ghcr.io/${{ github.repository }}
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=sha
 
       - name: Build and push Docker images
         uses: docker/build-push-action@ad44023a93711e3deb337508980b4b5e9bcdc5dc
@@ -47,4 +53,4 @@ jobs:
           platforms: linux/amd64,linux/arm64
           push: true
           labels: ${{ steps.meta.outputs.labels }}
-          tags: ${{ github.sha }},${{ steps.meta.outputs.tags }}
+          tags: ${{ steps.meta.outputs.tags }}
