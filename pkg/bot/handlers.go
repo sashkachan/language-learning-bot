@@ -3,10 +3,10 @@ package bot
 import (
 	"context"
 	"database/sql"
-	"text/template"
-
+	"errors"
 	"log"
 	"strings"
+	"text/template"
 
 	"language-learning-bot/pkg/config"
 	openai_api "language-learning-bot/pkg/openai"
@@ -16,7 +16,7 @@ import (
 	"github.com/sashabaranov/go-openai"
 )
 
-func HandleCommand(bot *tgbotapi.BotAPI, message *tgbotapi.Message, db *sql.DB) error {
+func HandleCommand(bot *tgbotapi.BotAPI, message *tgbotapi.Message, db *sql.DB, openaiClient *openai.Client) error {
 	// log the command to the console
 	log.Printf("%d [%s] %s", message.From.ID, message.From.UserName, message.Text)
 	response := ""
@@ -29,14 +29,14 @@ func HandleCommand(bot *tgbotapi.BotAPI, message *tgbotapi.Message, db *sql.DB) 
 		response = ""
 
 	case "examples":
-		if err := handleExamplesCommand(bot, message, db); err != nil {
+		if err := handleExamplesCommand(bot, message, db, openaiClient); err != nil {
 			log.Printf("Error handling examples command: %v\n", err)
 			return err
 		}
 		response = "I will respond with examples of the word or phrase usage."
 
 	case "translation":
-		if err := handleTranslationCommand(bot, message, db); err != nil {
+		if err := handleTranslationCommand(bot, message, db, openaiClient); err != nil {
 			log.Printf("Error handling translation command: %v\n", err)
 			return err
 		}
@@ -54,11 +54,73 @@ func HandleCommand(bot *tgbotapi.BotAPI, message *tgbotapi.Message, db *sql.DB) 
 	return nil
 }
 
-func handleExamplesCommand(bot *tgbotapi.BotAPI, message *tgbotapi.Message, db *sql.DB) error {
+func handleExamplesCommand(bot *tgbotapi.BotAPI, message *tgbotapi.Message, db *sql.DB, openaiClient *openai.Client) error {
+	// get the last interaction so we can send the user the last word they queried
+	lastQuery, err := storage.GetLastUserQuery(db, int(message.Chat.ID))
+	if err != nil {
+		log.Printf("Error getting last query: %v\n", err)
+		return err
+	}
+
+	// get user language
+	language, err := storage.GetUserLanguage(db, int(message.From.ID))
+	if err != nil {
+		log.Printf("Error getting user language: %v\n", err)
+		return err
+	}
+
+	// log last query
+	log.Printf("Last query: %v\n", lastQuery)
+	// check if the last query type is not already examples. If it is, do nothing, otherwise
+	// query gpt api for examples
+	if lastQuery.Type != "examples" {
+		response, err := ProcessQuery("examples", language, lastQuery.Word, db, int(message.Chat.ID), openaiClient)
+		if err != nil {
+			log.Printf("Error processing query: %v\n", err)
+			return err
+		}
+		msg := tgbotapi.NewMessage(message.Chat.ID, response)
+		_, err = bot.Send(msg)
+		if err != nil {
+			log.Printf("Error sending GPT response: %v\n", err)
+			return err
+		}
+	}
 	return storage.UpdateUserHelpType(db, int(message.From.ID), "examples")
 }
 
-func handleTranslationCommand(bot *tgbotapi.BotAPI, message *tgbotapi.Message, db *sql.DB) error {
+func handleTranslationCommand(bot *tgbotapi.BotAPI, message *tgbotapi.Message, db *sql.DB, openaiClient *openai.Client) error {
+	// get the last interaction so we can send the user the last word they queried
+	lastQuery, err := storage.GetLastUserQuery(db, int(message.Chat.ID))
+	if err != nil {
+		log.Printf("Error getting last query: %v\n", err)
+		return err
+	}
+
+	// get user language
+	language, err := storage.GetUserLanguage(db, int(message.From.ID))
+	if err != nil {
+		log.Printf("Error getting user language: %v\n", err)
+		return err
+	}
+
+	// log last query
+	log.Printf("Last query: %v\n", lastQuery)
+	// check if the last query type is not already translation. If it is, do nothing, otherwise
+	// query gpt api for translation
+	if lastQuery.Type != "translation" {
+		response, err := ProcessQuery("translation", language, lastQuery.Word, db, int(message.Chat.ID), openaiClient)
+		if err != nil {
+			log.Printf("Error processing query: %v\n", err)
+			return err
+		}
+		msg := tgbotapi.NewMessage(message.Chat.ID, response)
+		_, err = bot.Send(msg)
+		if err != nil {
+			log.Printf("Error sending GPT response: %v\n", err)
+			return err
+		}
+	}
 	return storage.UpdateUserHelpType(db, int(message.From.ID), "translation")
 }
 
@@ -115,6 +177,11 @@ func updateLanguagePreference(bot *tgbotapi.BotAPI, callbackQuery *tgbotapi.Call
 	}
 }
 
+type GptTemplateData struct {
+	Language    string
+	MessageText string
+}
+
 func HandleMessage(bot *tgbotapi.BotAPI, message *tgbotapi.Message, openaiClient *openai.Client, db *sql.DB) {
 	userID := int(message.From.ID)
 	language, err := storage.GetUserLanguage(db, userID)
@@ -124,49 +191,14 @@ func HandleMessage(bot *tgbotapi.BotAPI, message *tgbotapi.Message, openaiClient
 		return
 	}
 
-	helpType, shouldReturn := GetUserHelpType(db, userID)
-	if shouldReturn {
-		return
-	}
-
-	// Fetch the examples and translation templates using NewConfig
-	config := config.NewConfig()
-
-	// Determine the template to use based on the user setting
-	var gptTemplate *template.Template
-	switch helpType {
-	case "examples":
-		gptTemplate = config.GptTemplateWordUsageExamples
-	case "translation":
-		gptTemplate = config.GptTemplateWordTranslation
-	default:
-		log.Printf("Invalid help type: %s\n", helpType)
-		return
-	}
-
-	// Create a data structure to hold the template variables
-	data := struct {
-		Language    string
-		MessageText string
-	}{
-		Language:    language,
-		MessageText: message.Text,
-	}
-
-	// Execute the template with the data
-	var gptPrompt strings.Builder
-	err = gptTemplate.Execute(&gptPrompt, data)
+	helpType, err := GetUserHelpType(db, userID)
 	if err != nil {
-		log.Printf("Error executing GPT template: %v\n", err)
 		return
 	}
 
-	// create new context
-	ctx := context.Background()
-
-	gptresponse, err := openai_api.GetGPTResponse(ctx, openaiClient, gptPrompt.String())
+	gptresponse, err := ProcessQuery(helpType, language, message.Text, db, userID, openaiClient)
 	if err != nil {
-		log.Printf("Error getting GPT response: %v\n", err)
+		log.Printf("Error processing query: %v\n", err)
 		return
 	}
 
@@ -177,12 +209,84 @@ func HandleMessage(bot *tgbotapi.BotAPI, message *tgbotapi.Message, openaiClient
 	}
 }
 
-func GetUserHelpType(db *sql.DB, userID int) (string, bool) {
+func ProcessQuery(helpType string, language string, message string, db *sql.DB, userID int, openaiClient *openai.Client) (string, error) {
+	config := config.NewConfig()
+
+	// check if we can find cached response
+	// TODO: add language to cache key
+	log.Printf("Checking cache for response: language=%s, type=%s, word=%s\n", language, helpType, message)
+
+	cachedResponse, err := storage.GetCachedResponseByWordAndType(db, language, helpType, message)
+	if err != nil {
+		log.Printf("Error getting cached response: %v\n", err)
+		return "", err
+	}
+
+	if cachedResponse != "" {
+		log.Printf("Found cached response")
+		// store query
+		log.Printf("Storing query: userID=%d, message=%s\n", userID, message)
+		_, err := storage.StoreQuery(db, userID, helpType, language, message)
+		if err != nil {
+			log.Printf("Error storing query: %v\n", err)
+		}
+		return cachedResponse, nil
+	}
+
+	var gptTemplate *template.Template
+	switch helpType {
+	case "examples":
+		gptTemplate = config.GptTemplateWordUsageExamples
+	case "translation":
+		gptTemplate = config.GptTemplateWordTranslation
+	default:
+		log.Printf("invalid help type: %s\n", helpType)
+		return "", errors.New("invalid help type")
+	}
+
+	data := GptTemplateData{
+		Language:    language,
+		MessageText: message,
+	}
+
+	var gptPrompt strings.Builder
+	err = gptTemplate.Execute(&gptPrompt, data)
+	if err != nil {
+		log.Printf("Error executing GPT template: %v\n", err)
+		return "", err
+	}
+
+	// log storing query: userID, message
+	log.Printf("Storing query: %d, %s\n", userID, message)
+	query_id, err := storage.StoreQuery(db, userID, helpType, language, message)
+	if err != nil {
+		log.Printf("Error storing query: %v\n", err)
+	}
+
+	ctx := context.Background()
+
+	gptresponse, err := openai_api.GetGPTResponse(ctx, openaiClient, gptPrompt.String())
+	if err != nil {
+		log.Printf("Error getting GPT response: %v\n", err)
+		return "", err
+	}
+
+	// cache response
+	log.Printf("Caching response: language=%s, type=%s, word=%s\n", language, helpType, message)
+	err = storage.CacheResponse(db, query_id, gptresponse)
+	if err != nil {
+		log.Printf("Error caching response: %v\n", err)
+		return "", err
+	}
+	return gptresponse, nil
+}
+
+func GetUserHelpType(db *sql.DB, userID int) (string, error) {
 	helpType, err := storage.GetUserHelpType(db, userID)
 	if err != nil {
 
 		log.Printf("Error getting user help_type: %v\n", err)
-		return "", true
+		return "", err
 	}
 	if helpType == "" {
 		helpType = "examples"
@@ -190,10 +294,10 @@ func GetUserHelpType(db *sql.DB, userID int) (string, bool) {
 		if err != nil {
 
 			log.Printf("Error updating user help_type: %v\n", err)
-			return "", true
+			return "", err
 		}
 	}
-	return helpType, false
+	return helpType, nil
 }
 
 // IsAllowedUser checks if user is allowed to use bot

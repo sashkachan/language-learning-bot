@@ -7,8 +7,10 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"time"
 
 	bot "language-learning-bot/pkg/bot"
+	"language-learning-bot/pkg/storage"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"github.com/joho/godotenv"
@@ -88,6 +90,8 @@ func main() {
 	u.Timeout = 60
 	updates := tgbot.GetUpdatesChan(u)
 
+	ScheduleQueriesRemoval(db)
+
 	log.Println("Running...")
 	// Handle updates (commands, messages)
 	for update := range updates {
@@ -99,7 +103,7 @@ func main() {
 		}
 		if update.Message != nil {
 			if update.Message.IsCommand() {
-				err := bot.HandleCommand(tgbot, update.Message, db)
+				err := bot.HandleCommand(tgbot, update.Message, db, openaiClient)
 				if err != nil {
 					log.Printf("Error handling command: %v\n", err)
 				}
@@ -111,6 +115,19 @@ func main() {
 			bot.HandleCallbackQuery(tgbot, update.CallbackQuery, db)
 		}
 	}
+}
+
+func ScheduleQueriesRemoval(db *sql.DB) {
+	ticker := time.NewTicker(24 * time.Hour)
+	defer ticker.Stop()
+	go func() {
+		for range ticker.C {
+			err := storage.CleanOldCachedResponses(db)
+			if err != nil {
+				log.Println("Error cleaning old cached responses:", err)
+			}
+		}
+	}()
 }
 
 func IsAllowedUser(update tgbotapi.Update, allowedUsers []int64) bool {

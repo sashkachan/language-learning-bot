@@ -2,6 +2,11 @@ package storage
 
 import "database/sql"
 
+type LastUserQuery struct {
+	Word string
+	Type string
+}
+
 func UpdateUserLanguage(db *sql.DB, userID int, language string) error {
 	// SQL query for upsert operation
 	query := `
@@ -51,4 +56,78 @@ func GetUserHelpType(db *sql.DB, userID int) (string, error) {
 		return "", err
 	}
 	return helpType, nil
+}
+
+func StoreQuery(db *sql.DB, userID int, helpType, language, word string) (int, error) {
+	query := `
+	INSERT INTO queries (user_id, help_type, language, word)
+	VALUES (?, ?, ?, ?)
+	RETURNING id;
+	`
+	var queryID int
+	err := db.QueryRow(query, userID, helpType, language, word).Scan(&queryID)
+	if err != nil {
+		return 0, err
+	}
+
+	return queryID, nil
+}
+
+func GetLastUserQuery(db *sql.DB, userID int) (*LastUserQuery, error) {
+	// select last query from user, join with cached_responses to get type
+	query := `
+  SELECT q.word, q.help_type
+  FROM queries q
+  WHERE q.user_id = ?
+  ORDER BY q.timestamp DESC
+  LIMIT 1;
+  `
+	var lastQuery LastUserQuery
+	qr := db.QueryRow(query, userID)
+	if qr.Err() != nil {
+		return nil, qr.Err()
+	}
+	qr.Scan(&lastQuery.Word, &lastQuery.Type)
+	return &lastQuery, nil
+}
+
+func CacheResponse(db *sql.DB, query_id int, response string) error {
+	query := `
+  INSERT INTO cached_responses (query_id, response)
+  VALUES (?, ?);
+  `
+	_, err := db.Exec(query, query_id, response)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func GetCachedResponseByWordAndType(db *sql.DB, language, helpType, word string) (string, error) {
+	query := `
+  SELECT cr.response
+  FROM cached_responses cr
+  JOIN queries q ON q.id = cr.query_id
+  WHERE q.language = ? AND q.help_type = ? AND q.word = ? ;
+  `
+	var response string
+	qr := db.QueryRow(query, language, helpType, word)
+	err := qr.Err()
+	if err != nil {
+		return "", err
+	}
+	qr.Scan(&response)
+	return response, nil
+}
+
+func CleanOldCachedResponses(db *sql.DB) error {
+	query := `
+        DELETE FROM cached_responses
+        WHERE datetime(created_at) < datetime('now', '-24 hours');
+    `
+	_, err := db.Exec(query)
+	if err != nil {
+		return err
+	}
+	return nil
 }
