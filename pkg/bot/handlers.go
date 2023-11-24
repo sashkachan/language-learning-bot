@@ -3,11 +3,12 @@ package bot
 import (
 	"context"
 	"database/sql"
-	"html/template"
+	"text/template"
+
 	"log"
-	"os"
 	"strings"
 
+	"language-learning-bot/pkg/config"
 	openai_api "language-learning-bot/pkg/openai"
 	storage "language-learning-bot/pkg/storage"
 
@@ -28,15 +29,15 @@ func HandleCommand(bot *tgbotapi.BotAPI, message *tgbotapi.Message, db *sql.DB) 
 		response = ""
 
 	case "examples":
-		if err := storage.UpdateUserHelpType(db, int(message.From.ID), "examples"); err != nil {
-			log.Printf("Error updating user help type: %v\n", err)
+		if err := handleExamplesCommand(bot, message, db); err != nil {
+			log.Printf("Error handling examples command: %v\n", err)
 			return err
 		}
 		response = "I will respond with examples of the word or phrase usage."
 
 	case "translation":
-		if err := storage.UpdateUserHelpType(db, int(message.From.ID), "translation"); err != nil {
-			log.Printf("Error updating user help type: %v\n", err)
+		if err := handleTranslationCommand(bot, message, db); err != nil {
+			log.Printf("Error handling translation command: %v\n", err)
 			return err
 		}
 		response = "I will respond with translations."
@@ -51,6 +52,14 @@ func HandleCommand(bot *tgbotapi.BotAPI, message *tgbotapi.Message, db *sql.DB) 
 		}
 	}
 	return nil
+}
+
+func handleExamplesCommand(bot *tgbotapi.BotAPI, message *tgbotapi.Message, db *sql.DB) error {
+	return storage.UpdateUserHelpType(db, int(message.From.ID), "examples")
+}
+
+func handleTranslationCommand(bot *tgbotapi.BotAPI, message *tgbotapi.Message, db *sql.DB) error {
+	return storage.UpdateUserHelpType(db, int(message.From.ID), "translation")
 }
 
 func HandleCallbackQuery(bot *tgbotapi.BotAPI, callbackQuery *tgbotapi.CallbackQuery, db *sql.DB) {
@@ -115,8 +124,25 @@ func HandleMessage(bot *tgbotapi.BotAPI, message *tgbotapi.Message, openaiClient
 		return
 	}
 
-	// Define the template for the GPT prompt
-	gptTemplateWordExamples := os.Getenv("GPT_TEMPLATE_WORD_EXAMPLES")
+	helpType, shouldReturn := GetUserHelpType(db, userID)
+	if shouldReturn {
+		return
+	}
+
+	// Fetch the examples and translation templates using NewConfig
+	config := config.NewConfig()
+
+	// Determine the template to use based on the user setting
+	var gptTemplate *template.Template
+	switch helpType {
+	case "examples":
+		gptTemplate = config.GptTemplateWordUsageExamples
+	case "translation":
+		gptTemplate = config.GptTemplateWordTranslation
+	default:
+		log.Printf("Invalid help type: %s\n", helpType)
+		return
+	}
 
 	// Create a data structure to hold the template variables
 	data := struct {
@@ -127,17 +153,9 @@ func HandleMessage(bot *tgbotapi.BotAPI, message *tgbotapi.Message, openaiClient
 		MessageText: message.Text,
 	}
 
-	// Create a new template and parse the template string
-	tmpl := template.New("gptTemplate")
-	tmpl, err = tmpl.Parse(gptTemplateWordExamples)
-	if err != nil {
-		log.Printf("Error parsing GPT template: %v\n", err)
-		return
-	}
-
 	// Execute the template with the data
 	var gptPrompt strings.Builder
-	err = tmpl.Execute(&gptPrompt, data)
+	err = gptTemplate.Execute(&gptPrompt, data)
 	if err != nil {
 		log.Printf("Error executing GPT template: %v\n", err)
 		return
@@ -152,12 +170,30 @@ func HandleMessage(bot *tgbotapi.BotAPI, message *tgbotapi.Message, openaiClient
 		return
 	}
 
-	// ... [handle message] ...
 	msg := tgbotapi.NewMessage(message.Chat.ID, gptresponse)
 	_, err = bot.Send(msg)
 	if err != nil {
 		log.Printf("Error sending GPT response: %v\n", err)
 	}
+}
+
+func GetUserHelpType(db *sql.DB, userID int) (string, bool) {
+	helpType, err := storage.GetUserHelpType(db, userID)
+	if err != nil {
+
+		log.Printf("Error getting user help_type: %v\n", err)
+		return "", true
+	}
+	if helpType == "" {
+		helpType = "examples"
+		err = storage.UpdateUserHelpType(db, userID, helpType)
+		if err != nil {
+
+			log.Printf("Error updating user help_type: %v\n", err)
+			return "", true
+		}
+	}
+	return helpType, false
 }
 
 // IsAllowedUser checks if user is allowed to use bot

@@ -40,3 +40,15 @@ func UpdateUserHelpType(db *sql.DB, userID int, helpType string) error {
 	}
 	return nil
 }
+
+func GetUserHelpType(db *sql.DB, userID int) (string, error) {
+	query := `
+	SELECT help_type FROM users WHERE id = ?;
+	`
+	var helpType string
+	err := db.QueryRow(query, userID).Scan(&helpType)
+	if err != nil {
+		return "", err
+	}
+	return helpType, nil
+}

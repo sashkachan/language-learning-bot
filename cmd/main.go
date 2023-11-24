@@ -99,7 +99,11 @@ func main() {
 		}
 		if update.Message != nil {
 			if update.Message.IsCommand() {
-				bot.HandleCommand(tgbot, update.Message, db)
+				err := bot.HandleCommand(tgbot, update.Message, db)
+				if err != nil {
+					log.Printf("Error handling command: %v\n", err)
+				}
+
 			} else {
 				bot.HandleMessage(tgbot, update.Message, openaiClient, db)
 			}
