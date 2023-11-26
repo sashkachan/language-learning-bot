@@ -68,10 +68,6 @@ func main() {
 		log.Fatal(err)
 	}
 
-	if err != nil {
-		log.Fatal(err)
-	}
-
 	// allowed telegram users ids
 	allowedUsers := []int64{}
 	allowedUsersStr := os.Getenv("ALLOWED_TELEGRAM_USER_IDS")
@@ -118,7 +114,18 @@ func main() {
 }
 
 func ScheduleQueriesRemoval(db *sql.DB) {
-	ticker := time.NewTicker(24 * time.Hour)
+	// check if CACHE_CLEAN_INTERVAL_HOURS is set, otherwise set default value to 24
+	cacheCleanIntervalHoursStr := os.Getenv("CACHE_CLEAN_INTERVAL_HOURS")
+	if cacheCleanIntervalHoursStr == "" {
+		cacheCleanIntervalHoursStr = "24"
+	}
+	cacheCleanIntervalHours, err := strconv.Atoi(cacheCleanIntervalHoursStr)
+	if err != nil {
+		log.Fatal(err)
+	}
+	// schedule queries removal
+	ticker := time.NewTicker(time.Duration(cacheCleanIntervalHours) * time.Hour)
+
 	defer ticker.Stop()
 	go func() {
 		for range ticker.C {

@@ -237,7 +237,6 @@ func ProcessQuery(helpType string, language string, message string, db *sql.DB, 
 	gptConfig := config.NewConfig()
 
 	// check if we can find cached response
-	// TODO: add language to cache key
 	log.Printf("Checking cache for response: language=%s, type=%s, word=%s\n", language, helpType, message)
 
 	cachedResponse, err := storage.GetCachedResponseByWordAndType(db, language, helpType, message)
