@@ -1,0 +1,4 @@
+user: dag
+assistant: 1. Ik werk vijf dagen per week\n2. De zon schijnt vandaag de hele dag\n3. Hij heeft de hele dag in bed gelegen\n4. Morgen is het een mooie dag voor een picknick
+user: beschikbaar
+assistant: 1. De vergaderzaal is beschikbaar vanaf 14.00 uur. \n2. Is er iemand beschikbaar om de telefoon op te nemen?\n3. Helaas is het product niet meer beschikbaar in onze online winkel.\n4. De sollicitant gaf aan dat hij altijd beschikbaar is voor werk.

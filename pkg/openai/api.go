@@ -2,33 +2,34 @@ package openai_api
 
 import (
 	"context"
-	"fmt"
 
 	openai "github.com/sashabaranov/go-openai"
 )
 
-// type WordData struct {
-// 	UsageExamples []string
-// 	Translation   string
-// 	Pronunciation string
-// }
+type GPTRequest struct {
+	Prompt                 string
+	WordOrPhrase           string
+	ChatCompletionMessages []openai.ChatCompletionMessage
+}
 
-func GetGPTResponse(ctx context.Context, openaiClient *openai.Client, prompt string) (string, error) {
-	resp, err := openaiClient.CreateChatCompletion(
-		context.Background(),
-		openai.ChatCompletionRequest{
-			Model: openai.GPT3Dot5Turbo16K0613,
-			Messages: []openai.ChatCompletionMessage{
-				{
-					Role:    openai.ChatMessageRoleUser,
-					Content: prompt,
-				},
-			},
-		},
-	)
+func GetGPTResponse(ctx context.Context, openaiClient *openai.Client, req GPTRequest) (string, error) {
+	// Refactored implementation
+	promptMessages := []openai.ChatCompletionMessage{
+		{Role: openai.ChatMessageRoleUser, Content: req.Prompt},
+	}
+
+	promptAndMessages := append(promptMessages, req.ChatCompletionMessages...)
+	promptAndMessages = append(promptAndMessages, openai.ChatCompletionMessage{
+		Role:    openai.ChatMessageRoleUser,
+		Content: req.WordOrPhrase,
+	})
+
+	resp, err := openaiClient.CreateChatCompletion(ctx, openai.ChatCompletionRequest{
+		Model:    openai.GPT3Dot5Turbo16K0613,
+		Messages: promptAndMessages,
+	})
 
 	if err != nil {
-		fmt.Printf("ChatCompletion error: %v\n", err)
 		return "", err
 	}
 

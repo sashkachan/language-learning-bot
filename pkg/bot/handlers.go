@@ -6,7 +6,6 @@ import (
 	"errors"
 	"log"
 	"strings"
-	"text/template"
 
 	"language-learning-bot/pkg/config"
 	openai_api "language-learning-bot/pkg/openai"
@@ -16,6 +15,15 @@ import (
 	"github.com/sashabaranov/go-openai"
 )
 
+// HandleCommand handles the incoming command from the user and performs the corresponding action.
+// It logs the command to the console, switches based on the command type, and sends a response back to the user.
+// Parameters:
+// - bot: A pointer to the tgbotapi.BotAPI instance.
+// - message: A pointer to the tgbotapi.Message instance representing the incoming message.
+// - db: A pointer to the sql.DB instance for database operations.
+// - openaiClient: A pointer to the openai.Client instance for OpenAI API operations.
+// Returns:
+// - An error if any error occurs during the handling of the command, otherwise nil.
 func HandleCommand(bot *tgbotapi.BotAPI, message *tgbotapi.Message, db *sql.DB, openaiClient *openai.Client) error {
 	// log the command to the console
 	log.Printf("%d [%s] %s", message.From.ID, message.From.UserName, message.Text)
@@ -209,8 +217,24 @@ func HandleMessage(bot *tgbotapi.BotAPI, message *tgbotapi.Message, openaiClient
 	}
 }
 
+// ProcessQuery processes a query based on the given parameters.
+// It checks if a cached response exists for the query and returns it if found.
+// If no cached response is found, it generates a response using the GPT model.
+// The generated response is then cached for future use.
+//
+// Parameters:
+// - helpType: The type of help requested (e.g., "examples", "translation").
+// - language: The language of the query.
+// - message: The query message.
+// - db: The database connection.
+// - userID: The ID of the user making the query.
+// - openaiClient: The OpenAI client for generating GPT responses.
+//
+// Returns:
+// - string: The generated response or the cached response.
+// - error: An error if any occurred during the process.
 func ProcessQuery(helpType string, language string, message string, db *sql.DB, userID int, openaiClient *openai.Client) (string, error) {
-	config := config.NewConfig()
+	gptConfig := config.NewConfig()
 
 	// check if we can find cached response
 	// TODO: add language to cache key
@@ -233,12 +257,12 @@ func ProcessQuery(helpType string, language string, message string, db *sql.DB, 
 		return cachedResponse, nil
 	}
 
-	var gptTemplate *template.Template
+	var gpt *config.GptRequestType
 	switch helpType {
 	case "examples":
-		gptTemplate = config.GptTemplateWordUsageExamples
+		gpt = gptConfig.GptTemplateWordUsageExamples
 	case "translation":
-		gptTemplate = config.GptTemplateWordTranslation
+		gpt = gptConfig.GptTemplateWordTranslation
 	default:
 		log.Printf("invalid help type: %s\n", helpType)
 		return "", errors.New("invalid help type")
@@ -250,7 +274,7 @@ func ProcessQuery(helpType string, language string, message string, db *sql.DB, 
 	}
 
 	var gptPrompt strings.Builder
-	err = gptTemplate.Execute(&gptPrompt, data)
+	err = gpt.PromptTemplate.Execute(&gptPrompt, data)
 	if err != nil {
 		log.Printf("Error executing GPT template: %v\n", err)
 		return "", err
@@ -263,9 +287,15 @@ func ProcessQuery(helpType string, language string, message string, db *sql.DB, 
 		log.Printf("Error storing query: %v\n", err)
 	}
 
+	gptRequest := openai_api.GPTRequest{
+		Prompt:                 gptPrompt.String(),
+		WordOrPhrase:           message,
+		ChatCompletionMessages: gptConfig.GptPromptTunings[language][helpType].Messages,
+	}
+
 	ctx := context.Background()
 
-	gptresponse, err := openai_api.GetGPTResponse(ctx, openaiClient, gptPrompt.String())
+	gptresponse, err := openai_api.GetGPTResponse(ctx, openaiClient, gptRequest)
 	if err != nil {
 		log.Printf("Error getting GPT response: %v\n", err)
 		return "", err
@@ -302,7 +332,6 @@ func GetUserHelpType(db *sql.DB, userID int) (string, error) {
 
 // IsAllowedUser checks if user is allowed to use bot
 func IsAllowedUser(update tgbotapi.Update, allowedUsers []int64) bool {
-	// check if user is allowed to use bot. Try update.Message.From.ID first, then update.CallbackQuery.From.ID
 	var userID int64
 	if update.Message != nil {
 		userID = update.Message.From.ID
