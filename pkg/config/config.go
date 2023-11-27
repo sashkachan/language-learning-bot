@@ -54,28 +54,41 @@ func NewGptPromptTuningFromTextFiles() (GptPromptTuningByLanguageAndHelpType, er
 					if err != nil {
 						return nil, err
 					}
-
+					var chatCompletionMessages []openai.ChatCompletionMessage
+					chatCompletionMessages = getChatCompletionMessages(content, chatCompletionMessages)
 					promptTuning := GptPromptTuning{
 						Language: language,
 						HelpType: helpType,
-						Messages: []openai.ChatCompletionMessage{
-							{
-								Role:    openai.ChatMessageRoleUser,
-								Content: string(content),
-							},
-						},
+						Messages: chatCompletionMessages,
 					}
 
 					if _, ok := promptTunings[language]; !ok {
 						promptTunings[language] = make(map[string]GptPromptTuning)
 					}
 					promptTunings[language][helpType] = promptTuning
+					chatCompletionMessages = nil
 				}
 			}
 		}
 	}
 
 	return promptTunings, nil
+}
+
+func getChatCompletionMessages(content []byte, chatCompletionMessages []openai.ChatCompletionMessage) []openai.ChatCompletionMessage {
+	for _, line := range strings.Split(string(content), "\n") {
+		roleandcontent := strings.Split(line, ":")
+		if len(roleandcontent) != 2 {
+			continue
+		}
+		role := strings.TrimSpace(roleandcontent[0])
+		content := strings.TrimSpace(roleandcontent[1])
+		chatCompletionMessages = append(chatCompletionMessages, openai.ChatCompletionMessage{
+			Role:    role,
+			Content: strings.Replace(content, `\n`, "\n", -1),
+		})
+	}
+	return chatCompletionMessages
 }
 
 // NewConfig creates a new config

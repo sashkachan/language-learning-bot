@@ -63,6 +63,11 @@ func HandleCommand(bot *tgbotapi.BotAPI, message *tgbotapi.Message, db *sql.DB, 
 }
 
 func handleExamplesCommand(bot *tgbotapi.BotAPI, message *tgbotapi.Message, db *sql.DB, openaiClient *openai.Client) error {
+	err := storage.UpdateUserHelpType(db, int(message.From.ID), "examples")
+	if err != nil {
+		log.Printf("Error updating user help_type: %v\n", err)
+		return err
+	}
 	// get the last interaction so we can send the user the last word they queried
 	lastQuery, err := storage.GetLastUserQuery(db, int(message.Chat.ID))
 	if err != nil {
@@ -94,10 +99,15 @@ func handleExamplesCommand(bot *tgbotapi.BotAPI, message *tgbotapi.Message, db *
 			return err
 		}
 	}
-	return storage.UpdateUserHelpType(db, int(message.From.ID), "examples")
+	return err
 }
 
 func handleTranslationCommand(bot *tgbotapi.BotAPI, message *tgbotapi.Message, db *sql.DB, openaiClient *openai.Client) error {
+	err := storage.UpdateUserHelpType(db, int(message.From.ID), "translation")
+	if err != nil {
+		log.Printf("Error updating user help_type: %v\n", err)
+		return err
+	}
 	// get the last interaction so we can send the user the last word they queried
 	lastQuery, err := storage.GetLastUserQuery(db, int(message.Chat.ID))
 	if err != nil {
@@ -129,7 +139,7 @@ func handleTranslationCommand(bot *tgbotapi.BotAPI, message *tgbotapi.Message, d
 			return err
 		}
 	}
-	return storage.UpdateUserHelpType(db, int(message.From.ID), "translation")
+	return err
 }
 
 func HandleCallbackQuery(bot *tgbotapi.BotAPI, callbackQuery *tgbotapi.CallbackQuery, db *sql.DB) {
@@ -235,7 +245,9 @@ func HandleMessage(bot *tgbotapi.BotAPI, message *tgbotapi.Message, openaiClient
 // - error: An error if any occurred during the process.
 func ProcessQuery(helpType string, language string, message string, db *sql.DB, userID int, openaiClient *openai.Client) (string, error) {
 	gptConfig := config.NewConfig()
-
+	if message == "" {
+		return "", errors.New("message is empty")
+	}
 	// check if we can find cached response
 	log.Printf("Checking cache for response: language=%s, type=%s, word=%s\n", language, helpType, message)
 

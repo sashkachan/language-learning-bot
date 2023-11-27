@@ -1,8 +1,8 @@
 user: надежный
-Assistant: надежный. Adjective\n1. reliable, trustworthy, dependable
+assistant: надежный.\nAdjective\n1. reliable, trustworthy, dependable\n2. safe, secure
 user: сухой
-Assistant: сухой. Noun.\n1. dry, arid\n2. dehydrated, desiccated
+assistant: сухой.\nNoun.\n1. dry, arid\n2. dehydrated, desiccated\n3. stale, dried-up\n4. sober, abstinent\n5. dry, unemotional\n6. dry, dull, uninteresting
 user: lilac
-Assistant: сирень. Noun.\n1. lilac
+assistant: сирень.\nNoun.\n1. lilac\n2. lilac, lilac bush\n3. lilac, lilac color
 user: гулять
-Assistant: гулять. Verb\n1. to walk, to stroll
+assistant: гулять.\nVerb\n1. to walk, to stroll, to promenade\n2. to walk, to stroll, to promenade\n3. to walk, to stroll, to promenade

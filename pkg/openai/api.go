@@ -15,7 +15,7 @@ type GPTRequest struct {
 func GetGPTResponse(ctx context.Context, openaiClient *openai.Client, req GPTRequest) (string, error) {
 	// Refactored implementation
 	promptMessages := []openai.ChatCompletionMessage{
-		{Role: openai.ChatMessageRoleUser, Content: req.Prompt},
+		{Role: openai.ChatMessageRoleSystem, Content: req.Prompt},
 	}
 
 	promptAndMessages := append(promptMessages, req.ChatCompletionMessages...)
