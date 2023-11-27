@@ -93,23 +93,31 @@ func main() {
 	for update := range updates {
 		// pretty_print(update)
 		// check if user is allowed to use bot
-		if !bot.IsAllowedUser(update, allowedUsers) {
-			log.Printf("User %d is not allowed to use bot", update.Message.From.ID)
-			continue
-		}
-		if update.Message != nil {
-			if update.Message.IsCommand() {
-				err := bot.HandleCommand(tgbot, update.Message, db, openaiClient)
-				if err != nil {
-					log.Printf("Error handling command: %v\n", err)
+		go func(update tgbotapi.Update) {
+			defer func() {
+				if r := recover(); r != nil {
+					log.Println("Recovered in f", r)
 				}
+			}()
 
-			} else {
-				bot.HandleMessage(tgbot, update.Message, openaiClient, db)
+			if !bot.IsAllowedUser(update, allowedUsers) {
+				log.Printf("User %d is not allowed to use bot", update.Message.From.ID)
+				return
 			}
-		} else if update.CallbackQuery != nil {
-			bot.HandleCallbackQuery(tgbot, update.CallbackQuery, db)
-		}
+			if update.Message != nil {
+				if update.Message.IsCommand() {
+					err := bot.HandleCommand(tgbot, update.Message, db, openaiClient)
+					if err != nil {
+						log.Printf("Error handling command: %v\n", err)
+					}
+
+				} else {
+					bot.HandleMessage(tgbot, update.Message, openaiClient, db)
+				}
+			} else if update.CallbackQuery != nil {
+				bot.HandleCallbackQuery(tgbot, update.CallbackQuery, db)
+			}
+		}(update)
 	}
 }
 
