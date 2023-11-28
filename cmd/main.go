@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"database/sql"
 	"encoding/json"
 	"log"
@@ -100,19 +101,21 @@ func main() {
 				}
 			}()
 
+			ctx := context.Background()
+
 			if !bot.IsAllowedUser(update, allowedUsers) {
 				log.Printf("User %d is not allowed to use bot", update.Message.From.ID)
 				return
 			}
 			if update.Message != nil {
 				if update.Message.IsCommand() {
-					err := bot.HandleCommand(tgbot, update.Message, db, openaiClient)
+					err := bot.HandleCommand(ctx, tgbot, update.Message, db, openaiClient)
 					if err != nil {
 						log.Printf("Error handling command: %v\n", err)
 					}
 
 				} else {
-					bot.HandleMessage(tgbot, update.Message, openaiClient, db)
+					bot.HandleMessage(ctx, tgbot, update.Message, openaiClient, db)
 				}
 			} else if update.CallbackQuery != nil {
 				bot.HandleCallbackQuery(tgbot, update.CallbackQuery, db)
@@ -143,15 +146,4 @@ func ScheduleQueriesRemoval(db *sql.DB) {
 			}
 		}
 	}()
-}
-
-func IsAllowedUser(update tgbotapi.Update, allowedUsers []int64) bool {
-	// check if user is allowed to use bot
-	userID := update.Message.From.ID
-	for _, allowedUser := range allowedUsers {
-		if userID == allowedUser {
-			return true
-		}
-	}
-	return false
 }

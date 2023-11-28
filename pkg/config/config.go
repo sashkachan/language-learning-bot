@@ -55,7 +55,7 @@ func NewGptPromptTuningFromTextFiles() (GptPromptTuningByLanguageAndHelpType, er
 						return nil, err
 					}
 					var chatCompletionMessages []openai.ChatCompletionMessage
-					chatCompletionMessages = getChatCompletionMessages(content, chatCompletionMessages)
+					chatCompletionMessages = getChatCompletionMessages(content)
 					promptTuning := GptPromptTuning{
 						Language: language,
 						HelpType: helpType,
@@ -75,7 +75,8 @@ func NewGptPromptTuningFromTextFiles() (GptPromptTuningByLanguageAndHelpType, er
 	return promptTunings, nil
 }
 
-func getChatCompletionMessages(content []byte, chatCompletionMessages []openai.ChatCompletionMessage) []openai.ChatCompletionMessage {
+func getChatCompletionMessages(content []byte) []openai.ChatCompletionMessage {
+	var chatCompletionMessages []openai.ChatCompletionMessage
 	for _, line := range strings.Split(string(content), "\n") {
 		roleandcontent := strings.Split(line, ":")
 		if len(roleandcontent) != 2 {

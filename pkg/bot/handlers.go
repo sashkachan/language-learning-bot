@@ -24,7 +24,7 @@ import (
 // - openaiClient: A pointer to the openai.Client instance for OpenAI API operations.
 // Returns:
 // - An error if any error occurs during the handling of the command, otherwise nil.
-func HandleCommand(bot *tgbotapi.BotAPI, message *tgbotapi.Message, db *sql.DB, openaiClient *openai.Client) error {
+func HandleCommand(ctx context.Context, bot *tgbotapi.BotAPI, message *tgbotapi.Message, db *sql.DB, openaiClient *openai.Client) error {
 	// log the command to the console
 	log.Printf("%d [%s] %s", message.From.ID, message.From.UserName, message.Text)
 	response := ""
@@ -200,7 +200,7 @@ type GptTemplateData struct {
 	MessageText string
 }
 
-func HandleMessage(bot *tgbotapi.BotAPI, message *tgbotapi.Message, openaiClient *openai.Client, db *sql.DB) {
+func HandleMessage(ctx context.Context, bot *tgbotapi.BotAPI, message *tgbotapi.Message, openaiClient *openai.Client, db *sql.DB) {
 	userID := int(message.From.ID)
 	language, err := storage.GetUserLanguage(db, userID)
 	if err != nil {
