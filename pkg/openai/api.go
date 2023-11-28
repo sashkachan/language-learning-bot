@@ -2,6 +2,9 @@ package openai_api
 
 import (
 	"context"
+	"io"
+
+	"log"
 
 	openai "github.com/sashabaranov/go-openai"
 )
@@ -34,4 +37,30 @@ func GetGPTResponse(ctx context.Context, openaiClient *openai.Client, req GPTReq
 	}
 
 	return resp.Choices[0].Message.Content, nil
+}
+
+func GetTTSResponse(ctx context.Context, openaiClient *openai.Client, req string) ([]byte, error) {
+	request := openai.CreateSpeechRequest{
+		Model: openai.TTsModel1HD,
+		Input: req,
+		Voice: openai.VoiceNova,
+	}
+	response, err := openaiClient.CreateSpeech(ctx, request)
+	if err != nil {
+		log.Println("error when requesting whisperapi")
+		return nil, err
+	}
+	defer func(io.ReadCloser) {
+		response.Close()
+	}(response)
+
+	body, err := io.ReadAll(response)
+	if err != nil {
+		log.Println("error when reading response body")
+		return nil, err
+	}
+
+	response.Close()
+
+	return body, nil
 }

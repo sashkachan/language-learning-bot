@@ -4,7 +4,10 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"fmt"
 	"log"
+	"regexp"
+	"strconv"
 	"strings"
 
 	"language-learning-bot/pkg/config"
@@ -49,6 +52,12 @@ func HandleCommand(ctx context.Context, bot *tgbotapi.BotAPI, message *tgbotapi.
 			return err
 		}
 		response = "I will respond with translations."
+
+	case "pronunciation":
+		if err := handlePronounciationCommand(bot, message, db, openaiClient); err != nil {
+			log.Printf("Error handling pronounciation command: %v\n", err)
+			return err
+		}
 	}
 	// send the response to the user
 	if response != "" {
@@ -58,6 +67,93 @@ func HandleCommand(ctx context.Context, bot *tgbotapi.BotAPI, message *tgbotapi.
 			log.Printf("Error sending response: %v\n", err)
 			return err
 		}
+	}
+	return nil
+}
+
+func parseExamplesByNumber(message string) []string {
+	// parse the last response for the strings starting with a number
+	lines := strings.Split(message, "\n")
+	var examples []string
+	numberPrefixRegex := regexp.MustCompile(`[0-9]+\. `)
+	for _, line := range lines {
+		// check if the line matches the pattern "[0-9]+\. "
+		if numberPrefixRegex.MatchString(line) {
+			// strip the number from the line
+			line = strings.Split(line, ". ")[1]
+			// add the line to the examples
+			examples = append(examples, line)
+		}
+	}
+	return examples
+}
+
+func handlePronounciationCommand(bot *tgbotapi.BotAPI, message *tgbotapi.Message, db *sql.DB, openaiClient *openai.Client) error {
+	userId := int(message.From.ID)
+
+	lastQuery, err := storage.GetLastUserQuery(db, userId)
+	if err != nil {
+		log.Printf("Error getting last query: %v\n", err)
+		return err
+	}
+	log.Println(lastQuery)
+	lastResponse, err := storage.GetCachedResponseByWordLangAndType(db, lastQuery.Language, lastQuery.Type, lastQuery.Word)
+
+	if err != nil {
+		log.Printf("Error getting cached response: %v\n", err)
+		return err
+	}
+
+	log.Println(lastResponse)
+	if lastQuery.Type == "examples" {
+		// parse the last response for the strings starting with a number
+		// draw the inline keyboard with the numbers
+		// when the user clicks on the number, send the corresponding example (stripped of the number) to the openai tts api
+		examples := parseExamplesByNumber(lastResponse)
+		log.Printf("Examples: %v\n", examples)
+
+		if len(examples) > 0 {
+			// send the examples selection keyboard
+			err := sendExamplesSelection(bot, message.Chat.ID, len(examples))
+			if err != nil {
+				log.Printf("Error sending examples selection: %v\n", err)
+				return err
+			}
+
+		}
+
+	} else if lastQuery.Type == "translation" {
+		// take the last response, and take the first line
+		// send the first line to the openai tts api
+		lastResponseLines := strings.Split(lastResponse, "\n")
+		if len(lastResponseLines) > 0 {
+			firstLine := lastResponseLines[0]
+			log.Printf("First line: %s\n", firstLine)
+
+			err := sendAudioMessage(openaiClient, firstLine, message, bot)
+			if err != nil {
+				log.Printf("Error sending audio message: %v\n", err)
+				return err
+			}
+
+		}
+	}
+	return nil
+}
+
+func sendAudioMessage(openaiClient *openai.Client, firstLine string, message *tgbotapi.Message, bot *tgbotapi.BotAPI) error {
+	openaiResponse, err := openai_api.GetTTSResponse(context.Background(), openaiClient, firstLine)
+	if err != nil {
+		log.Printf("Error getting TTS response: %v\n", err)
+		return err
+	}
+
+	audio := tgbotapi.FileBytes{Name: fmt.Sprintf("%s.mp3", firstLine), Bytes: openaiResponse}
+	audioMsg := tgbotapi.NewAudio(message.Chat.ID, audio)
+	_, err = bot.Send(audioMsg)
+	if err != nil {
+		log.Printf("Error sending audio message: %v\n", err)
+		return err
 	}
 	return nil
 }
@@ -142,11 +238,57 @@ func handleTranslationCommand(bot *tgbotapi.BotAPI, message *tgbotapi.Message, d
 	return err
 }
 
-func HandleCallbackQuery(bot *tgbotapi.BotAPI, callbackQuery *tgbotapi.CallbackQuery, db *sql.DB) {
+func HandleCallbackQuery(bot *tgbotapi.BotAPI, openaiClient *openai.Client, callbackQuery *tgbotapi.CallbackQuery, db *sql.DB) {
 	data := callbackQuery.Data
 	if strings.HasPrefix(data, "language:") {
 		language := strings.Split(data, ":")[1]
 		updateLanguagePreference(bot, callbackQuery, db, language)
+	}
+
+	if strings.HasPrefix(data, "pronunciation:") {
+		// parse the number from the callback data into an int
+		exampleNumber, err := strconv.Atoi(strings.Split(data, ":")[1])
+		if err != nil {
+			log.Printf("Error parsing example number: %v\n", err)
+			return
+		}
+		log.Println("Pronounciation example: ", exampleNumber)
+		userId := int(callbackQuery.From.ID)
+
+		// TODO: clean the duplication by caching the examples in the database
+		lastQuery, err := storage.GetLastUserQuery(db, userId)
+		if err != nil {
+			log.Printf("Error getting last query: %v\n", err)
+			return
+		}
+		log.Println(lastQuery)
+		lastResponse, err := storage.GetCachedResponseByWordLangAndType(db, lastQuery.Language, lastQuery.Type, lastQuery.Word)
+
+		if err != nil {
+			log.Printf("Error getting cached response: %v\n", err)
+			return
+		}
+
+		if lastQuery.Type == "examples" {
+			examples := parseExamplesByNumber(lastResponse)
+			log.Printf("Examples: %v\n", examples)
+
+			if len(examples) > 0 && len(examples) >= exampleNumber {
+				// send the Nth example
+				err := sendAudioMessage(openaiClient, examples[exampleNumber-1], callbackQuery.Message, bot)
+				if err != nil {
+					log.Printf("Error sending audio message: %v\n", err)
+					return
+				}
+			}
+		}
+		// Send a confirmation message and remove the inline keyboard
+		msg := tgbotapi.NewEditMessageText(callbackQuery.Message.Chat.ID, callbackQuery.Message.MessageID, fmt.Sprintf("Example %d sent", exampleNumber))
+		// msg.ReplyMarkup = &emptyKeyboard
+		_, err = bot.Send(msg)
+		if err != nil {
+			log.Printf("Error sending confirmation message: %v\n", err)
+		}
 	}
 }
 
@@ -161,6 +303,16 @@ func sendLanguageSelection(bot *tgbotapi.BotAPI, chatID int64) error {
 	return nil
 }
 
+func sendExamplesSelection(bot *tgbotapi.BotAPI, chatID int64, total int) error {
+	msg := tgbotapi.NewMessage(chatID, "Please choose an example:")
+	msg.ReplyMarkup = examplesInlineKeyboard(total)
+	_, err := bot.Send(msg)
+	if err != nil {
+		log.Printf("Error sending examples selection: %v\n", err)
+		return err
+	}
+	return nil
+}
 func languageInlineKeyboard() tgbotapi.InlineKeyboardMarkup {
 	keyboard := tgbotapi.NewInlineKeyboardMarkup(
 		tgbotapi.NewInlineKeyboardRow(
@@ -174,6 +326,26 @@ func languageInlineKeyboard() tgbotapi.InlineKeyboardMarkup {
 			tgbotapi.NewInlineKeyboardButtonData("Russian", "language:Russian"),
 		),
 	)
+	return keyboard
+}
+
+func examplesInlineKeyboard(total int) tgbotapi.InlineKeyboardMarkup {
+	keyboard := tgbotapi.NewInlineKeyboardMarkup()
+	currentInlineRow := tgbotapi.NewInlineKeyboardRow()
+
+	for i := 1; i <= total; i++ {
+		if i%3 == 0 {
+			// add the current row to the keyboard
+			keyboard.InlineKeyboard = append(keyboard.InlineKeyboard, currentInlineRow)
+			currentInlineRow = tgbotapi.NewInlineKeyboardRow()
+		}
+		currentInlineRow = append(currentInlineRow, tgbotapi.NewInlineKeyboardButtonData(fmt.Sprintf("%d", i), fmt.Sprintf("pronunciation:%d", i)))
+		if i == total {
+			// add the current row to the keyboard
+			keyboard.InlineKeyboard = append(keyboard.InlineKeyboard, currentInlineRow)
+		}
+
+	}
 	return keyboard
 }
 
@@ -251,7 +423,7 @@ func ProcessQuery(helpType string, language string, message string, db *sql.DB, 
 	// check if we can find cached response
 	log.Printf("Checking cache for response: language=%s, type=%s, word=%s\n", language, helpType, message)
 
-	cachedResponse, err := storage.GetCachedResponseByWordAndType(db, language, helpType, message)
+	cachedResponse, err := storage.GetCachedResponseByWordLangAndType(db, language, helpType, message)
 	if err != nil {
 		log.Printf("Error getting cached response: %v\n", err)
 		return "", err

@@ -3,8 +3,9 @@ package storage
 import "database/sql"
 
 type LastUserQuery struct {
-	Word string
-	Type string
+	Word     string
+	Type     string
+	Language string
 }
 
 func UpdateUserLanguage(db *sql.DB, userID int, language string) error {
@@ -76,7 +77,7 @@ func StoreQuery(db *sql.DB, userID int, helpType, language, word string) (int, e
 func GetLastUserQuery(db *sql.DB, userID int) (*LastUserQuery, error) {
 	// select last query from user, join with cached_responses to get type
 	query := `
-  SELECT q.word, q.help_type
+  SELECT q.word, q.help_type, q.language
   FROM queries q
   WHERE q.user_id = ?
   ORDER BY q.timestamp DESC
@@ -87,7 +88,7 @@ func GetLastUserQuery(db *sql.DB, userID int) (*LastUserQuery, error) {
 	if qr.Err() != nil {
 		return nil, qr.Err()
 	}
-	qr.Scan(&lastQuery.Word, &lastQuery.Type)
+	qr.Scan(&lastQuery.Word, &lastQuery.Type, &lastQuery.Language)
 	return &lastQuery, nil
 }
 
@@ -103,7 +104,7 @@ func CacheResponse(db *sql.DB, query_id int, response string) error {
 	return nil
 }
 
-func GetCachedResponseByWordAndType(db *sql.DB, language, helpType, word string) (string, error) {
+func GetCachedResponseByWordLangAndType(db *sql.DB, language, helpType, word string) (string, error) {
 	query := `
   SELECT cr.response
   FROM cached_responses cr

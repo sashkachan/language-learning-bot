@@ -42,6 +42,7 @@ func main() {
 		tgbotapi.BotCommand{Command: "start", Description: "Configure the preferred language"},
 		tgbotapi.BotCommand{Command: "translation", Description: "Provide translation of a phrase or a word"},
 		tgbotapi.BotCommand{Command: "examples", Description: "Provide 3-4 examples of a word or a phrase"},
+		tgbotapi.BotCommand{Command: "pronunciation", Description: "Pronounce a word or a phrase"},
 	)
 	_, err = tgbot.Request(tgbotConfig)
 	if err != nil {
@@ -118,7 +119,7 @@ func main() {
 					bot.HandleMessage(ctx, tgbot, update.Message, openaiClient, db)
 				}
 			} else if update.CallbackQuery != nil {
-				bot.HandleCallbackQuery(tgbot, update.CallbackQuery, db)
+				bot.HandleCallbackQuery(tgbot, openaiClient, update.CallbackQuery, db)
 			}
 		}(update)
 	}
