@@ -12,6 +12,8 @@
             buildInputs = [gopls go];
             shellHook = ''
               echo Welcome to langekko devshell!
+              echo To build and run the project:
+              echo "rm language.db || true && go run cmd/main.go"
             '';
             };
         }

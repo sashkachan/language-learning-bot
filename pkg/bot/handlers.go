@@ -18,15 +18,6 @@ import (
 	"github.com/sashabaranov/go-openai"
 )
 
-// HandleCommand handles the incoming command from the user and performs the corresponding action.
-// It logs the command to the console, switches based on the command type, and sends a response back to the user.
-// Parameters:
-// - bot: A pointer to the tgbotapi.BotAPI instance.
-// - message: A pointer to the tgbotapi.Message instance representing the incoming message.
-// - db: A pointer to the sql.DB instance for database operations.
-// - openaiClient: A pointer to the openai.Client instance for OpenAI API operations.
-// Returns:
-// - An error if any error occurs during the handling of the command, otherwise nil.
 func HandleCommand(ctx context.Context, bot *tgbotapi.BotAPI, message *tgbotapi.Message, db *sql.DB, openaiClient *openai.Client) error {
 	// log the command to the console
 	log.Printf("%d [%s] %s", message.From.ID, message.From.UserName, message.Text)
@@ -200,6 +191,7 @@ func HandleCallbackQuery(bot *tgbotapi.BotAPI, openaiClient *openai.Client, call
 	}
 
 	if strings.HasPrefix(data, "pronunciation:") {
+
 		// parse the number from the callback data into an int
 		exampleNumber, err := strconv.Atoi(strings.Split(data, ":")[1])
 		if err != nil {
@@ -207,6 +199,15 @@ func HandleCallbackQuery(bot *tgbotapi.BotAPI, openaiClient *openai.Client, call
 			return
 		}
 		log.Println("Pronounciation example: ", exampleNumber)
+
+		msg := tgbotapi.NewEditMessageText(callbackQuery.Message.Chat.ID,
+			callbackQuery.Message.MessageID,
+			fmt.Sprintf("You picked number %d. The pronunciation will be sent to you shortly."+
+				"If it does not pop up in a few seconds, please choose /pronunciation from the menu and try again!", exampleNumber))
+		_, err = bot.Send(msg)
+		if err != nil {
+			log.Printf("Error sending confirmation message: %v\n", err)
+		}
 		userId := int(callbackQuery.From.ID)
 
 		// send the Nth example
@@ -214,13 +215,6 @@ func HandleCallbackQuery(bot *tgbotapi.BotAPI, openaiClient *openai.Client, call
 		if shouldReturn {
 			log.Printf("Error sending last request audio")
 			return
-		}
-		// Send a confirmation message and remove the inline keyboard
-		msg := tgbotapi.NewEditMessageText(callbackQuery.Message.Chat.ID, callbackQuery.Message.MessageID, fmt.Sprintf("Example %d sent", exampleNumber))
-		// msg.ReplyMarkup = &emptyKeyboard
-		_, err = bot.Send(msg)
-		if err != nil {
-			log.Printf("Error sending confirmation message: %v\n", err)
 		}
 	}
 }
@@ -282,7 +276,7 @@ func sendLastRequestAudio(db *sql.DB, userId int, exampleNumber int, message str
 }
 
 func sendLanguageSelection(bot *tgbotapi.BotAPI, chatID int64) error {
-	msg := tgbotapi.NewMessage(chatID, "Please choose a language:")
+	msg := tgbotapi.NewMessage(chatID, "Please choose a language you want help learning:")
 	msg.ReplyMarkup = languageInlineKeyboard()
 	_, err := bot.Send(msg)
 	if err != nil {
@@ -348,8 +342,14 @@ func updateLanguagePreference(bot *tgbotapi.BotAPI, callbackQuery *tgbotapi.Call
 		return
 	}
 
+	responseMsg := "Great, you picked %s language. If you start typing words or phrases, I will send you a few examples with that word or a phrase. " +
+		"If you type a whole sentence, then that sentence will be translated to %s. " +
+		"You can also pick translation, where I will translate supplied phrase either from English to the language you picked, or the other way around. " +
+		"Enjoy!"
+
+	processedResponseMsg := fmt.Sprintf(responseMsg, language, language)
 	// Send a confirmation message and remove the inline keyboard
-	msg := tgbotapi.NewEditMessageText(callbackQuery.Message.Chat.ID, callbackQuery.Message.MessageID, "Language set to "+language)
+	msg := tgbotapi.NewEditMessageText(callbackQuery.Message.Chat.ID, callbackQuery.Message.MessageID, processedResponseMsg)
 	// msg.ReplyMarkup = &emptyKeyboard
 	_, err = bot.Send(msg)
 	if err != nil {
