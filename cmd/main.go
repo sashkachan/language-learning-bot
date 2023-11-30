@@ -44,6 +44,7 @@ func main() {
 		tgbotapi.BotCommand{Command: "examples", Description: "Provide 3-4 examples of a word or a phrase"},
 		tgbotapi.BotCommand{Command: "pronunciation", Description: "Pronounce a word or a phrase"},
 	)
+
 	_, err = tgbot.Request(tgbotConfig)
 	if err != nil {
 		log.Fatal(err)

@@ -103,7 +103,7 @@ func sendAudioMessage(openaiClient *openai.Client, firstLine string, userid int,
 	}
 
 	audio := tgbotapi.FileBytes{Name: fmt.Sprintf("%s.mp3", firstLine), Bytes: openaiResponse}
-	audioMsg := tgbotapi.NewAudio(int64(userid), audio)
+	audioMsg := tgbotapi.NewVoice(int64(userid), audio)
 	_, err = bot.Send(audioMsg)
 	if err != nil {
 		log.Printf("Error sending audio message: %v\n", err)
