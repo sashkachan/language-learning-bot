@@ -241,17 +241,23 @@ func sendLastRequestAudio(db *sql.DB, userId int, exampleNumber int, message str
 
 	if lastQuery.Type == "examples" {
 		examples := parseExamplesByNumber(lastResponse)
-		log.Printf("Examples: %v\n", examples)
+		log.Printf("Examples: %d\n", len(examples))
 
-		if exampleNumber == 0 {
+		if exampleNumber == 0 && len(examples) > 0 {
 			// draw the inline keyboard with the examples
 			err := sendExamplesSelection(bot, int64(userId), len(examples))
 			if err != nil {
 				log.Printf("Error sending examples selection: %v\n", err)
 				return true
 			}
-		} else if len(examples) > 0 && len(examples) >= exampleNumber {
-			err := sendAudioMessage(openaiClient, examples[exampleNumber-1], userId, bot)
+		} else if len(examples) >= exampleNumber || len(examples) == 0 {
+			pronunciationString := ""
+			if len(examples) == 0 {
+				pronunciationString = lastResponse
+			} else {
+				pronunciationString = examples[exampleNumber-1]
+			}
+			err := sendAudioMessage(openaiClient, pronunciationString, userId, bot)
 			if err != nil {
 				log.Printf("Error sending audio message: %v\n", err)
 				return true
@@ -269,8 +275,9 @@ func sendLastRequestAudio(db *sql.DB, userId int, exampleNumber int, message str
 				return true
 			}
 		}
+	} else {
+		// examples count is 0?
 	}
-
 	return false
 }
 

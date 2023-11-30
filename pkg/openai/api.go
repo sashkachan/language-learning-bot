@@ -44,6 +44,7 @@ func GetTTSResponse(ctx context.Context, openaiClient *openai.Client, req string
 		Model: openai.TTsModel1HD,
 		Input: req,
 		Voice: openai.VoiceNova,
+		Speed: 0.9,
 	}
 	response, err := openaiClient.CreateSpeech(ctx, request)
 	if err != nil {
