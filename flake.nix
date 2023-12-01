@@ -9,7 +9,8 @@
         let pkgs = nixpkgs.legacyPackages.${system}; in
         {
           devShells.default = with pkgs; mkShell {
-            buildInputs = [gopls go];
+            buildInputs = [gopls delve go];
+            hardeningDisable = [ "all" ];
             shellHook = ''
               echo Welcome to langekko devshell!
               echo To build and run the project:

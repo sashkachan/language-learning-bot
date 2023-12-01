@@ -49,6 +49,13 @@ func HandleCommand(ctx context.Context, bot *tgbotapi.BotAPI, message *tgbotapi.
 			log.Printf("Error handling pronounciation command: %v\n", err)
 			return err
 		}
+
+	case "inflection":
+		if err := handleInflectionCommand(bot, message, db, openaiClient); err != nil {
+			log.Printf("Error handling inflection command: %v\n", err)
+			return err
+		}
+
 	}
 	// send the response to the user
 	if response != "" {
@@ -86,18 +93,10 @@ func handlePronounciationCommand(bot *tgbotapi.BotAPI, message *tgbotapi.Message
 	return nil
 }
 
-func sendAudioMessage(openaiClient *openai.Client, firstLine string, userid int, bot *tgbotapi.BotAPI) error {
-	openaiResponse, err := openai_api.GetTTSResponse(context.Background(), openaiClient, firstLine)
+func handleInflectionCommand(bot *tgbotapi.BotAPI, message *tgbotapi.Message, db *sql.DB, openaiClient *openai.Client) error {
+	err := storage.UpdateUserHelpType(db, int(message.From.ID), "inflection")
 	if err != nil {
-		log.Printf("Error getting TTS response: %v\n", err)
-		return err
-	}
-
-	audio := tgbotapi.FileBytes{Name: fmt.Sprintf("%s.mp3", firstLine), Bytes: openaiResponse}
-	audioMsg := tgbotapi.NewVoice(int64(userid), audio)
-	_, err = bot.Send(audioMsg)
-	if err != nil {
-		log.Printf("Error sending audio message: %v\n", err)
+		log.Printf("Error updating user help_type: %v\n", err)
 		return err
 	}
 	return nil
@@ -183,6 +182,23 @@ func handleTranslationCommand(bot *tgbotapi.BotAPI, message *tgbotapi.Message, d
 	return err
 }
 
+func sendAudioMessage(openaiClient *openai.Client, firstLine string, userid int, bot *tgbotapi.BotAPI) error {
+	openaiResponse, err := openai_api.GetTTSResponse(context.Background(), openaiClient, firstLine)
+	if err != nil {
+		log.Printf("Error getting TTS response: %v\n", err)
+		return err
+	}
+
+	audio := tgbotapi.FileBytes{Name: fmt.Sprintf("%s.mp3", firstLine), Bytes: openaiResponse}
+	audioMsg := tgbotapi.NewVoice(int64(userid), audio)
+	_, err = bot.Send(audioMsg)
+	if err != nil {
+		log.Printf("Error sending audio message: %v\n", err)
+		return err
+	}
+	return nil
+}
+
 func HandleCallbackQuery(bot *tgbotapi.BotAPI, openaiClient *openai.Client, callbackQuery *tgbotapi.CallbackQuery, db *sql.DB) {
 	data := callbackQuery.Data
 	if strings.HasPrefix(data, "language:") {
@@ -191,7 +207,6 @@ func HandleCallbackQuery(bot *tgbotapi.BotAPI, openaiClient *openai.Client, call
 	}
 
 	if strings.HasPrefix(data, "pronunciation:") {
-
 		// parse the number from the callback data into an int
 		exampleNumber, err := strconv.Atoi(strings.Split(data, ":")[1])
 		if err != nil {
@@ -342,7 +357,7 @@ func updateLanguagePreference(bot *tgbotapi.BotAPI, callbackQuery *tgbotapi.Call
 		return
 	}
 
-	responseMsg := "Great, you picked %s language. If you start typing words or phrases, I will send you a few examples with that word or a phrase. " +
+	responseMsg := "Great, you picked %s. If you start typing words or phrases, I will send you a few examples with that word or a phrase. " +
 		"If you type a whole sentence, then that sentence will be translated to %s. " +
 		"You can also pick translation, where I will translate supplied phrase either from English to the language you picked, or the other way around. " +
 		"Enjoy!"
@@ -436,6 +451,8 @@ func ProcessQuery(helpType string, language string, message string, db *sql.DB, 
 		gpt = gptConfig.GptTemplateWordUsageExamples
 	case "translation":
 		gpt = gptConfig.GptTemplateWordTranslation
+	case "inflection":
+		gpt = gptConfig.GptTemplateInflection
 	default:
 		log.Printf("invalid help type: %s\n", helpType)
 		return "", errors.New("invalid help type")

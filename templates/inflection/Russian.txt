@@ -1,0 +1,16 @@
+user: летит
+assistant: Лететь.\n\nPresent tense:\nЯ лечу\nТы летишь\nОн/она/оно летит\nМы летим\nВы летите\nОни летят\n\nPast tense:\nЯ летел/летела\nТы летел/летела\nОн/она/оно летел/летела\nМы летели\nВы летели\nОни летели\n\nFuture tense:\nЯ буду лететь\nТы будешь лететь\nОн/она/оно будет лететь\nМы будем лететь\nВы будете лететь will\nОни будут лететь
+user: курить
+assistant:курить\n\nPresent tense\nЯ курю smoke\nОни курят smoked\nОни курили will smoke\nОни будут курить
+user: люблю
+assistant: люблю:\n\nPresent tense:\nЯ люблю\nТы любишь\nОн/она/оно любит\nМы любим\nВы любите\nОни любят\n\nPast tense:\nЯ любил/любила\nТы любил/любила\nОн/она/оно любил/любила\nМы любили\nВы любили\nОни любили\n\nFuture tense:\nЯ буду любить\nТы будешь любить\nОн/она/оно будет любить\nМы будем любить\nВы будете любить will\nОни будут любить
+user: ходит
+assistant: ходить:\n\nPresent tense:\nЯ хожу\nТы ходишь\nОн/она/оно ходит\nМы ходим\nВы ходите\nОни ходят\n\nPast tense:\nЯ ходил/ходила\nТы ходил/ходила\nОн/она/оно ходил/ходила\nМы ходили\nВы ходили\nОни ходили\n\nFuture tense:\nЯ буду ходить\nТы будешь ходить\nОн/она/оно будет ходить\nМы будем ходить\nВы будете ходить will\nОни будут ходить
+user: машина
+assistant: мaшина (car):\nNominative Case (Именительный падеж): машина (singular), машины (plural) \nGenitive Case (Родительный падеж): машины (singular), машин (plural) \nDative Case (Дательный падеж): машине (singular), машинам (plural) \nAccusative Case (Винительный падеж): машину (singular), машины (plural) \nInstrumental Case (Творительный падеж): машиной (singular), машинами (plural) \nPrepositional Case (Предложный падеж): машине (singular), машинах (plural) 
+user: гармошка
+assistant: гармошка (accordion):\nNominative Case (Именительный падеж): гармошка (singular), гармошки (plural) \nGenitive Case (Родительный падеж): гармошки (singular), гармошек (plural) \nDative Case (Дательный падеж): гармошке (singular), гармошкам (plural) \nAccusative Case (Винительный падеж): гармошку (singular), гармошки (plural) \nInstrumental Case (Творительный падеж): гармошкой (singular), гармошками (plural) \nPrepositional Case (Предложный падеж): гармошке (singular), гармошках (plural) 
+user: помидор
+assistant: помидор (tomato):\nNominative Case (Именительный падеж): помидор (singular), помидоры (plural) \nGenitive Case (Родительный падеж): помидора (singular), помидоров (plural) \nDative Case (Дательный падеж): помидору (singular), помидорам (plural) \nAccusative Case (Винительный падеж): помидор (singular), помидоры (plural) \nInstrumental Case (Творительный падеж): помидором (singular), помидорами (plural) \nPrepositional Case (Предложный падеж): помидоре (singular), помидорах (plural) 
+user: кожа
+assistant: кожа (skin):\nNominative Case (Именительный падеж): кожа (singular), кожи (plural) \nGenitive Case (Родительный падеж): кожи (singular), кож (plural) \nDative Case (Дательный падеж): коже (singular), кожам (plural) \nAccusative Case (Винительный падеж): кожу (singular), кожи (plural) \nInstrumental Case (Творительный падеж): кожей (singular), кожами (plural) \nPrepositional Case (Предложный падеж): коже (singular), кожах (plural) 

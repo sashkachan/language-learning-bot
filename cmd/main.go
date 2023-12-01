@@ -40,6 +40,7 @@ func main() {
 	}
 	tgbotConfig := tgbotapi.NewSetMyCommands(
 		tgbotapi.BotCommand{Command: "start", Description: "Configure the preferred language"},
+		tgbotapi.BotCommand{Command: "inflection", Description: "Give inflection of a given word"},
 		tgbotapi.BotCommand{Command: "translation", Description: "Provide translation of a phrase or a word"},
 		tgbotapi.BotCommand{Command: "examples", Description: "Provide 3-4 examples of a word or a phrase"},
 		tgbotapi.BotCommand{Command: "pronunciation", Description: "Pronounce a word or a phrase"},

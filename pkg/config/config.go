@@ -26,6 +26,7 @@ type GptRequestType struct {
 type Config struct {
 	GptTemplateWordUsageExamples *GptRequestType
 	GptTemplateWordTranslation   *GptRequestType
+	GptTemplateInflection        *GptRequestType
 	GptPromptTunings             GptPromptTuningByLanguageAndHelpType
 }
 
@@ -78,12 +79,12 @@ func NewGptPromptTuningFromTextFiles() (GptPromptTuningByLanguageAndHelpType, er
 func getChatCompletionMessages(content []byte) []openai.ChatCompletionMessage {
 	var chatCompletionMessages []openai.ChatCompletionMessage
 	for _, line := range strings.Split(string(content), "\n") {
-		roleandcontent := strings.Split(line, ":")
-		if len(roleandcontent) != 2 {
+		role, content, found := strings.Cut(line, ":")
+		if found != true {
 			continue
 		}
-		role := strings.TrimSpace(roleandcontent[0])
-		content := strings.TrimSpace(roleandcontent[1])
+		role = strings.TrimSpace(role)
+		content = strings.TrimSpace(content)
 		chatCompletionMessages = append(chatCompletionMessages, openai.ChatCompletionMessage{
 			Role:    role,
 			Content: strings.Replace(content, `\n`, "\n", -1),
@@ -109,6 +110,11 @@ func NewConfig() *Config {
 		GptTemplateWordTranslation: &GptRequestType{
 			HelpType:       "translation",
 			PromptTemplate: template.Must(template.ParseFiles("templates/translation.txt")),
+		},
+
+		GptTemplateInflection: &GptRequestType{
+			HelpType:       "inflection",
+			PromptTemplate: template.Must(template.ParseFiles("templates/inflection.txt")),
 		},
 	}
 	return config

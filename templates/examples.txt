@@ -11,4 +11,4 @@ If the word is given in English, provide the translation for the word in the tar
 Avoid over-explaining the meaning. Do not be chatty, only stick to the examples of the word in sentences. 
 Do not provide links where the word or a phrase can show up. Be neutral and dry. 
 Do not try to suggest references to websites. 
-Always provide examples in the language you are helping with.
+Always provide examples or translations in the language you are helping with.
