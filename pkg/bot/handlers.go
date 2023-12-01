@@ -55,8 +55,9 @@ func HandleCommand(ctx context.Context, bot *tgbotapi.BotAPI, message *tgbotapi.
 			log.Printf("Error handling inflection command: %v\n", err)
 			return err
 		}
-
+		response = "I will respond with inflection (if applicable) for the provided word."
 	}
+
 	// send the response to the user
 	if response != "" {
 		msg := tgbotapi.NewMessage(message.Chat.ID, response)
