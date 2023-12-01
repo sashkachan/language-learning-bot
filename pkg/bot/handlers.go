@@ -392,12 +392,11 @@ func HandleMessage(ctx context.Context, bot *tgbotapi.BotAPI, message *tgbotapi.
 		return
 	}
 	// send thinking message while the api is processing the request
-	thinkMsg := tgbotapi.NewMessage(message.Chat.ID, "Thinking...")
-	thinkMsgResponse, err := bot.Send(thinkMsg)
-	if err != nil {
-		log.Printf("Error sending thinking message: %v\n", err)
+	thinkMsgResponse, shouldReturn := sendThinkingMessage(message, bot)
+	if shouldReturn {
 		return
 	}
+	defer deleteThinkingMessage(message, thinkMsgResponse, err, bot)
 
 	gptresponse, err := ProcessQuery(helpType, language, message.Text, db, userID, openaiClient)
 	if err != nil {
@@ -405,19 +404,30 @@ func HandleMessage(ctx context.Context, bot *tgbotapi.BotAPI, message *tgbotapi.
 		return
 	}
 
-	// delete the thinking message
-	deleteMsg := tgbotapi.NewDeleteMessage(message.Chat.ID, thinkMsgResponse.MessageID)
-	_, err = bot.Send(deleteMsg)
-	if err != nil {
-		log.Printf("Error deleting thinking message: %v\n", err)
-		// TODO figure out why it errors out, but functions ok?
-	}
-
 	msg := tgbotapi.NewMessage(message.Chat.ID, gptresponse)
 	_, err = bot.Send(msg)
 	if err != nil {
 		log.Printf("Error sending GPT response: %v\n", err)
 	}
+}
+
+func deleteThinkingMessage(message *tgbotapi.Message, thinkMsgResponse tgbotapi.Message, err error, bot *tgbotapi.BotAPI) {
+	deleteMsg := tgbotapi.NewDeleteMessage(message.Chat.ID, thinkMsgResponse.MessageID)
+	_, err = bot.Send(deleteMsg)
+	if err != nil {
+		log.Printf("Error deleting thinking message: %v\n", err)
+
+	}
+}
+
+func sendThinkingMessage(message *tgbotapi.Message, bot *tgbotapi.BotAPI) (tgbotapi.Message, bool) {
+	thinkMsg := tgbotapi.NewMessage(message.Chat.ID, "Thinking...")
+	thinkMsgResponse, err := bot.Send(thinkMsg)
+	if err != nil {
+		log.Printf("Error sending thinking message: %v\n", err)
+		return tgbotapi.Message{}, true
+	}
+	return thinkMsgResponse, false
 }
 
 // ProcessQuery processes a query based on the given parameters.
