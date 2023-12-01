@@ -391,11 +391,26 @@ func HandleMessage(ctx context.Context, bot *tgbotapi.BotAPI, message *tgbotapi.
 	if err != nil {
 		return
 	}
+	// send thinking message while the api is processing the request
+	thinkMsg := tgbotapi.NewMessage(message.Chat.ID, "Thinking...")
+	thinkMsgResponse, err := bot.Send(thinkMsg)
+	if err != nil {
+		log.Printf("Error sending thinking message: %v\n", err)
+		return
+	}
 
 	gptresponse, err := ProcessQuery(helpType, language, message.Text, db, userID, openaiClient)
 	if err != nil {
 		log.Printf("Error processing query: %v\n", err)
 		return
+	}
+
+	// delete the thinking message
+	deleteMsg := tgbotapi.NewDeleteMessage(message.Chat.ID, thinkMsgResponse.MessageID)
+	_, err = bot.Send(deleteMsg)
+	if err != nil {
+		log.Printf("Error deleting thinking message: %v\n", err)
+		// TODO figure out why it errors out, but functions ok?
 	}
 
 	msg := tgbotapi.NewMessage(message.Chat.ID, gptresponse)
