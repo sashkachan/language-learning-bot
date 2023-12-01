@@ -413,10 +413,12 @@ func HandleMessage(ctx context.Context, bot *tgbotapi.BotAPI, message *tgbotapi.
 
 func deleteThinkingMessage(message *tgbotapi.Message, thinkMsgResponse tgbotapi.Message, err error, bot *tgbotapi.BotAPI) {
 	deleteMsg := tgbotapi.NewDeleteMessage(message.Chat.ID, thinkMsgResponse.MessageID)
-	_, err = bot.Send(deleteMsg)
+	response, err := bot.Request(deleteMsg)
 	if err != nil {
 		log.Printf("Error deleting thinking message: %v\n", err)
-
+	}
+	if string(response.Result) != "true" {
+		log.Printf("response is not true from deleteThinkingMessage")
 	}
 }
 
