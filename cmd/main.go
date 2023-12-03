@@ -44,11 +44,12 @@ func main() {
 		tgbotapi.BotCommand{Command: "translation", Description: "Provide translation of a phrase or a word"},
 		tgbotapi.BotCommand{Command: "examples", Description: "Provide 3-4 examples of a word or a phrase"},
 		tgbotapi.BotCommand{Command: "pronunciation", Description: "Pronounce a word or a phrase"},
+		tgbotapi.BotCommand{Command: "speech_speed", Description: "Set speech speed"},
 	)
 
 	_, err = tgbot.Request(tgbotConfig)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatal("Error setting commands:", err)
 	}
 
 	// Initialize OpenAI Client
@@ -57,19 +58,19 @@ func main() {
 	// Initialize SQLite Database
 	db, err := sql.Open("sqlite3", os.Getenv("SQLITE_PATH"))
 	if err != nil {
-		log.Fatal(err)
+		log.Fatal("Error opening database:", err)
 	}
 	defer db.Close()
 
 	// load the contents of scripts/init_db.sql into a string
 	initDBSQL, err := os.ReadFile("scripts/init_db.sql")
 	if err != nil {
-		log.Fatal(err)
+		log.Fatal("Error reading init_db.sql:", err)
 	}
 	// execute the SQL query
 	_, err = db.Exec(string(initDBSQL))
 	if err != nil {
-		log.Fatal(err)
+		log.Fatal("Error executing init_db.sql:", err)
 	}
 
 	// allowed telegram users ids

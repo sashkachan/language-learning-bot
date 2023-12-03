@@ -39,13 +39,14 @@ func GetGPTResponse(ctx context.Context, openaiClient *openai.Client, req GPTReq
 	return resp.Choices[0].Message.Content, nil
 }
 
-func GetTTSResponse(ctx context.Context, openaiClient *openai.Client, req string) ([]byte, error) {
+func GetTTSResponse(ctx context.Context, openaiClient *openai.Client, speechSpeed float64, req string) ([]byte, error) {
 	request := openai.CreateSpeechRequest{
-		Model: openai.TTsModel1HD,
+		Model: openai.TTSModel1,
 		Input: req,
 		Voice: openai.VoiceNova,
-		Speed: 0.9,
+		Speed: speechSpeed,
 	}
+	log.Printf("GetTTSResponse request: speed=%.1f req=%s", speechSpeed, req)
 	response, err := openaiClient.CreateSpeech(ctx, request)
 	if err != nil {
 		log.Println("error when requesting whisperapi")

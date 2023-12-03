@@ -11,12 +11,25 @@ type LastUserQuery struct {
 func UpdateUserLanguage(db *sql.DB, userID int, language string) error {
 	// SQL query for upsert operation
 	query := `
-    INSERT INTO users (id, language, help_type)
-    VALUES (?, ?, ?)
-    ON CONFLICT(id)
-    DO UPDATE SET language = EXCLUDED.language;
-    `
-	_, err := db.Exec(query, userID, language, "")
+	INSERT INTO users (id, language, help_type, speech_speed)
+	VALUES (?, ?, ?, ?)
+	ON CONFLICT(id) DO UPDATE SET
+		language = EXCLUDED.language,
+		speech_speed = CASE WHEN EXCLUDED.speech_speed > 0 THEN EXCLUDED.speech_speed ELSE users.speech_speed END
+	`
+	_, err := db.Exec(query, userID, language, "", 0.0)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func UpdateUserSpeechSpeed(db *sql.DB, userID int, speech_speed float64) error {
+	query := `
+	UPDATE users SET speech_speed = ?
+	WHERE id = ?;
+	`
+	_, err := db.Exec(query, speech_speed, userID)
 	if err != nil {
 		return err
 	}
@@ -33,6 +46,18 @@ func GetUserLanguage(db *sql.DB, userID int) (string, error) {
 		return "", err
 	}
 	return language, nil
+}
+
+func GetUserSpeechSpeed(db *sql.DB, userID int) (float64, error) {
+	query := `
+	SELECT speech_speed FROM users WHERE id = ?;
+	`
+	var speechSpeed float64
+	err := db.QueryRow(query, userID).Scan(&speechSpeed)
+	if err != nil {
+		return 1.0, err
+	}
+	return speechSpeed, nil
 }
 
 func UpdateUserHelpType(db *sql.DB, userID int, helpType string) error {

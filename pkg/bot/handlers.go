@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log"
 	"regexp"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -29,7 +30,11 @@ func HandleCommand(ctx context.Context, bot *tgbotapi.BotAPI, message *tgbotapi.
 			return err
 		}
 		response = ""
-
+	case "speech_speed":
+		if err := sendSpeechSpeedSelection(bot, message.Chat.ID); err != nil {
+			log.Printf("Error sending speech speed selection: %v\n", err)
+			return err
+		}
 	case "examples":
 		if err := handleExamplesCommand(bot, message, db, openaiClient); err != nil {
 			log.Printf("Error handling examples command: %v\n", err)
@@ -109,38 +114,7 @@ func handleExamplesCommand(bot *tgbotapi.BotAPI, message *tgbotapi.Message, db *
 		log.Printf("Error updating user help_type: %v\n", err)
 		return err
 	}
-	// get the last interaction so we can send the user the last word they queried
-	lastQuery, err := storage.GetLastUserQuery(db, int(message.Chat.ID))
-	if err != nil {
-		log.Printf("Error getting last query: %v\n", err)
-		return err
-	}
-
-	// get user language
-	language, err := storage.GetUserLanguage(db, int(message.From.ID))
-	if err != nil {
-		log.Printf("Error getting user language: %v\n", err)
-		return err
-	}
-
-	// log last query
-	log.Printf("Last query: %v\n", lastQuery)
-	// check if the last query type is not already examples. If it is, do nothing, otherwise
-	// query gpt api for examples
-	if lastQuery.Type != "examples" {
-		response, err := ProcessQuery("examples", language, lastQuery.Word, db, int(message.Chat.ID), openaiClient)
-		if err != nil {
-			log.Printf("Error processing query: %v\n", err)
-			return err
-		}
-		msg := tgbotapi.NewMessage(message.Chat.ID, response)
-		_, err = bot.Send(msg)
-		if err != nil {
-			log.Printf("Error sending GPT response: %v\n", err)
-			return err
-		}
-	}
-	return err
+	return nil
 }
 
 func handleTranslationCommand(bot *tgbotapi.BotAPI, message *tgbotapi.Message, db *sql.DB, openaiClient *openai.Client) error {
@@ -149,42 +123,19 @@ func handleTranslationCommand(bot *tgbotapi.BotAPI, message *tgbotapi.Message, d
 		log.Printf("Error updating user help_type: %v\n", err)
 		return err
 	}
-	// get the last interaction so we can send the user the last word they queried
-	lastQuery, err := storage.GetLastUserQuery(db, int(message.Chat.ID))
-	if err != nil {
-		log.Printf("Error getting last query: %v\n", err)
-		return err
-	}
-
-	// get user language
-	language, err := storage.GetUserLanguage(db, int(message.From.ID))
-	if err != nil {
-		log.Printf("Error getting user language: %v\n", err)
-		return err
-	}
-
-	// log last query
-	log.Printf("Last query: %v\n", lastQuery)
-	// check if the last query type is not already translation. If it is, do nothing, otherwise
-	// query gpt api for translation
-	if lastQuery.Type != "translation" {
-		response, err := ProcessQuery("translation", language, lastQuery.Word, db, int(message.Chat.ID), openaiClient)
-		if err != nil {
-			log.Printf("Error processing query: %v\n", err)
-			return err
-		}
-		msg := tgbotapi.NewMessage(message.Chat.ID, response)
-		_, err = bot.Send(msg)
-		if err != nil {
-			log.Printf("Error sending GPT response: %v\n", err)
-			return err
-		}
-	}
-	return err
+	return nil
 }
 
-func sendAudioMessage(openaiClient *openai.Client, firstLine string, userid int, bot *tgbotapi.BotAPI) error {
-	openaiResponse, err := openai_api.GetTTSResponse(context.Background(), openaiClient, firstLine)
+func sendAudioMessage(openaiClient *openai.Client, db *sql.DB, firstLine string, userid int, bot *tgbotapi.BotAPI) error {
+	userSpeechSpeed, err := storage.GetUserSpeechSpeed(db, userid)
+
+	if err != nil {
+		log.Println("Failed to get user speech speed: ", err)
+		userSpeechSpeed = 1.0
+	}
+
+	openaiResponse, err := openai_api.GetTTSResponse(context.Background(), openaiClient, userSpeechSpeed, firstLine)
+
 	if err != nil {
 		log.Printf("Error getting TTS response: %v\n", err)
 		return err
@@ -204,7 +155,7 @@ func HandleCallbackQuery(bot *tgbotapi.BotAPI, openaiClient *openai.Client, call
 	data := callbackQuery.Data
 	if strings.HasPrefix(data, "language:") {
 		language := strings.Split(data, ":")[1]
-		updateLanguagePreference(bot, callbackQuery, db, language)
+		updateLanguagePreference(bot, callbackQuery, db, language, 0)
 	}
 
 	if strings.HasPrefix(data, "pronunciation:") {
@@ -231,6 +182,37 @@ func HandleCallbackQuery(bot *tgbotapi.BotAPI, openaiClient *openai.Client, call
 		if shouldReturn {
 			log.Printf("Error sending last request audio")
 			return
+		}
+	}
+
+	// set speech speed
+	if strings.HasPrefix(data, "speech_speed:") {
+		// parse the number from the callback data into an int
+		speechSpeed, err := strconv.ParseFloat(strings.Split(data, ":")[1], 64)
+		if err != nil {
+			log.Printf("Error parsing speech speed: %v\n", err)
+			return
+		}
+		log.Println("Speech speed: ", speechSpeed)
+
+		speechSpeedValues := getSpeechSpeedValues()
+		if speechSpeedText, ok := speechSpeedValues[speechSpeed]; ok {
+			log.Printf("Setting speech speed to %.1f", speechSpeed)
+			msg := tgbotapi.NewEditMessageText(callbackQuery.Message.Chat.ID,
+				callbackQuery.Message.MessageID,
+				fmt.Sprintf("You picked %s speech speed. The speech speed will be applied to the next pronunciation.", speechSpeedText))
+			_, err = bot.Send(msg)
+			if err != nil {
+				log.Printf("Error sending confirmation message: %v\n", err)
+			}
+			userId := int(callbackQuery.From.ID)
+
+			// send the Nth example
+			err = storage.UpdateUserSpeechSpeed(db, userId, speechSpeed)
+			if err != nil {
+				log.Printf("Error updating user speech speed: %v\n", err)
+				return
+			}
 		}
 	}
 }
@@ -267,7 +249,7 @@ func sendLastRequestAudio(db *sql.DB, userId int, exampleNumber int, message str
 			} else {
 				pronunciationString = examples[exampleNumber-1]
 			}
-			err := sendAudioMessage(openaiClient, pronunciationString, userId, bot)
+			err := sendAudioMessage(openaiClient, db, pronunciationString, userId, bot)
 			if err != nil {
 				log.Printf("Error sending audio message: %v\n", err)
 				return true
@@ -279,7 +261,7 @@ func sendLastRequestAudio(db *sql.DB, userId int, exampleNumber int, message str
 			firstLine := lastResponseLines[0]
 			log.Printf("First line: %s\n", firstLine)
 
-			err := sendAudioMessage(openaiClient, firstLine, userId, bot)
+			err := sendAudioMessage(openaiClient, db, firstLine, userId, bot)
 			if err != nil {
 				log.Printf("Error sending audio message: %v\n", err)
 				return true
@@ -302,6 +284,17 @@ func sendLanguageSelection(bot *tgbotapi.BotAPI, chatID int64) error {
 	return nil
 }
 
+func sendSpeechSpeedSelection(bot *tgbotapi.BotAPI, chatID int64) error {
+	msg := tgbotapi.NewMessage(chatID, "Please choose a speech speed:")
+	msg.ReplyMarkup = speechSpeedInlineKeyboard()
+	_, err := bot.Send(msg)
+	if err != nil {
+		log.Printf("Error sending speech speed selection: %v\n", err)
+		return err
+	}
+	return nil
+}
+
 func sendExamplesSelection(bot *tgbotapi.BotAPI, chatID int64, total int) error {
 	msg := tgbotapi.NewMessage(chatID, "Please choose an example:")
 	msg.ReplyMarkup = examplesInlineKeyboard(total)
@@ -311,6 +304,46 @@ func sendExamplesSelection(bot *tgbotapi.BotAPI, chatID int64, total int) error 
 		return err
 	}
 	return nil
+}
+
+func getSpeechSpeedValues() map[float64]string {
+	speedValues := map[float64]string{
+		0.5: "Slow",
+		0.7: "Normal",
+		1.0: "Fast",
+	}
+
+	keys := make([]float64, 0, len(speedValues))
+	for k := range speedValues {
+		keys = append(keys, k)
+	}
+
+	sort.Float64s(keys)
+
+	sortedMap := make(map[float64]string)
+	for _, k := range keys {
+		sortedMap[k] = speedValues[k]
+	}
+
+	return sortedMap
+}
+
+// speechSpeedInlineKeyboard returns an inline keyboard with speech speed options
+// The following options are available:
+// - Slow - 0.5
+// - Normal - 0.7
+// - Fast - 1.0
+// User is presented the text options
+func speechSpeedInlineKeyboard() tgbotapi.InlineKeyboardMarkup {
+	keyboard := tgbotapi.NewInlineKeyboardMarkup()
+	currentInlineRow := tgbotapi.NewInlineKeyboardRow()
+
+	speechSpeedValues := getSpeechSpeedValues()
+	for speechSpeed, speechSpeedText := range speechSpeedValues {
+		currentInlineRow = append(currentInlineRow, tgbotapi.NewInlineKeyboardButtonData(speechSpeedText, fmt.Sprintf("speech_speed:%.1f", speechSpeed)))
+	}
+	keyboard.InlineKeyboard = append(keyboard.InlineKeyboard, currentInlineRow)
+	return keyboard
 }
 
 func languageInlineKeyboard() tgbotapi.InlineKeyboardMarkup {
@@ -349,7 +382,7 @@ func examplesInlineKeyboard(total int) tgbotapi.InlineKeyboardMarkup {
 	return keyboard
 }
 
-func updateLanguagePreference(bot *tgbotapi.BotAPI, callbackQuery *tgbotapi.CallbackQuery, db *sql.DB, language string) {
+func updateLanguagePreference(bot *tgbotapi.BotAPI, callbackQuery *tgbotapi.CallbackQuery, db *sql.DB, language string, speech_speed float64) {
 	userID := int(callbackQuery.From.ID)
 	err := storage.UpdateUserLanguage(db, userID, language)
 	if err != nil {
@@ -396,7 +429,7 @@ func HandleMessage(ctx context.Context, bot *tgbotapi.BotAPI, message *tgbotapi.
 	if shouldReturn {
 		return
 	}
-	defer deleteThinkingMessage(message, thinkMsgResponse, err, bot)
+	defer deleteThinkingMessage(message, thinkMsgResponse, bot)
 
 	gptresponse, err := ProcessQuery(helpType, language, message.Text, db, userID, openaiClient)
 	if err != nil {
@@ -411,7 +444,7 @@ func HandleMessage(ctx context.Context, bot *tgbotapi.BotAPI, message *tgbotapi.
 	}
 }
 
-func deleteThinkingMessage(message *tgbotapi.Message, thinkMsgResponse tgbotapi.Message, err error, bot *tgbotapi.BotAPI) {
+func deleteThinkingMessage(message *tgbotapi.Message, thinkMsgResponse tgbotapi.Message, bot *tgbotapi.BotAPI) {
 	deleteMsg := tgbotapi.NewDeleteMessage(message.Chat.ID, thinkMsgResponse.MessageID)
 	response, err := bot.Request(deleteMsg)
 	if err != nil {
@@ -537,7 +570,7 @@ func GetUserHelpType(db *sql.DB, userID int) (string, error) {
 		return "", err
 	}
 	if helpType == "" {
-		helpType = "examples"
+		helpType = "translation"
 		err = storage.UpdateUserHelpType(db, userID, helpType)
 		if err != nil {
 

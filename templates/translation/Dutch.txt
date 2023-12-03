@@ -1,6 +1,6 @@
 user: bereiden
-assistant: bereiden\nWerkwoord.\n1. To prepare, to make ready\n2. To cook, to prepare food\n3. To make, to produce
+assistant: Bereiden.\nWerkwoord.\n\n1. To prepare, to make ready\n2. To cook, to prepare food\n3. To make, to produce
 user: sleeves
-assistant: mouwen.\nNaamwoord.\n1. Sleeves
+assistant: Mouwen.\nNaamwoord.\n\n1. Sleeves
 user: betrouwbaar
-assistant: betrouwbaar.\n1. Reliable, trustworthy\n2. Dependable, credible\n3. Faithful, loyal\n4. Safe, secure
+assistant: Betrouwbaar.\n\n1. Reliable, trustworthy\n2. Dependable, credible\n3. Faithful, loyal\n4. Safe, secure

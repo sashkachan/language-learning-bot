@@ -2,3 +2,13 @@ user: dag
 assistant: 1. Ik werk vijf dagen per week\n2. De zon schijnt vandaag de hele dag\n3. Hij heeft de hele dag in bed gelegen\n4. Morgen is het een mooie dag voor een picknick
 user: beschikbaar
 assistant: 1. De vergaderzaal is beschikbaar vanaf 14.00 uur. \n2. Is er iemand beschikbaar om de telefoon op te nemen?\n3. Helaas is het product niet meer beschikbaar in onze online winkel.\n4. De sollicitant gaf aan dat hij altijd beschikbaar is voor werk.
+user: apple
+assistant: Appel.\n\n1. Ik eet elke dag een appel voor mijn ontbijt.\n2. Appels zijn rijk aan vitamines.\n3. Kan je een appel voor me meenemen van de supermarkt?\n4. Zij bakt de lekkerste appeltaart.
+user: boek
+assistant: 1. Ik lees momenteel een interessant boek over geschiedenis.\n2. Kun je dat boek terugbrengen naar de bibliotheek?\n3. Ze koopt elk jaar tientallen boeken.\n4. Het boek ligt op de tafel.
+user: city
+assistant: Stad.\n\n1. We gaan dit weekend naar een mooie stad.\n2. In de stad is altijd iets te doen.\n3. Hij werkt in de stad maar woont op het platteland.\n4. De stad heeft veel historische gebouwen.
+user: bicycle
+assistant: Fiets.\n\n1. Ik fiets elke dag naar mijn werk.\n2. We gaan een lange fietstocht maken dit weekend.\n3. Zijn fiets heeft een lekke band.\n4. Fietsen is goed voor je gezondheid.
+user: zon
+assistant: 1. De zon schijnt vandaag fel.\n2. Het is belangrijk je in te smeren als de zon schijnt.\n3. Zonder de zon zou er geen leven op aarde zijn.\n4. Zij houdt ervan om in de zon te liggen.

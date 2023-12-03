@@ -23,11 +23,17 @@ type GptRequestType struct {
 	Messages       []openai.ChatCompletionMessage
 }
 
+type TTSConfig struct {
+	Voice string
+	Speed float64
+}
+
 type Config struct {
 	GptTemplateWordUsageExamples *GptRequestType
 	GptTemplateWordTranslation   *GptRequestType
 	GptTemplateInflection        *GptRequestType
 	GptPromptTunings             GptPromptTuningByLanguageAndHelpType
+	TTSConfig                    *TTSConfig
 }
 
 func NewGptPromptTuningFromTextFiles() (GptPromptTuningByLanguageAndHelpType, error) {
@@ -80,7 +86,7 @@ func getChatCompletionMessages(content []byte) []openai.ChatCompletionMessage {
 	var chatCompletionMessages []openai.ChatCompletionMessage
 	for _, line := range strings.Split(string(content), "\n") {
 		role, content, found := strings.Cut(line, ":")
-		if found != true {
+		if !found {
 			continue
 		}
 		role = strings.TrimSpace(role)
@@ -115,6 +121,10 @@ func NewConfig() *Config {
 		GptTemplateInflection: &GptRequestType{
 			HelpType:       "inflection",
 			PromptTemplate: template.Must(template.ParseFiles("templates/inflection.txt")),
+		},
+		TTSConfig: &TTSConfig{
+			Voice: "nova",
+			Speed: 1,
 		},
 	}
 	return config
