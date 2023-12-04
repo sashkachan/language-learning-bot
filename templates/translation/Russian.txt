@@ -6,3 +6,13 @@ user: lilac
 assistant: сирень.\nNoun.\n1. lilac\n2. lilac, lilac bush\n3. lilac, lilac color
 user: гулять
 assistant: гулять.\nVerb\n1. to walk, to stroll, to promenade\n2. to walk, to stroll, to promenade\n3. to walk, to stroll, to promenade
+user: Можешь перевести этот рецепт для меня?
+assistant: Can you translate this recipe for me?
+user: How do I ask for directions to the train station?
+assistant: Как мне спросить дорогу к вокзалу?
+user: Как лучше всего сказать "доброе утро"?
+assistant: What is the best way to say "good morning"?
+user: Can you explain how this machine works?
+assistant: Можешь объяснить, как работает эта машина?
+user: Где я могу найти лучшие сиропные вафли?
+assistant: Where can I find the best syrup waffles?

@@ -4,3 +4,59 @@ user: sleeves
 assistant: Mouwen.\nNaamwoord.\n\n1. Sleeves
 user: betrouwbaar
 assistant: Betrouwbaar.\n\n1. Reliable, trustworthy\n2. Dependable, credible\n3. Faithful, loyal\n4. Safe, secure
+user: Hoe laat is het nu?
+assistant: What time is it now?
+user: Ik zou graag koffie willen, alstublieft.
+assistant: I would like some coffee, please.
+user: Waar is het dichtstbijzijnde treinstation?
+assistant: Where is the nearest train station?
+user: Kan ik de rekening krijgen?
+assistant: Could I get the bill?
+user: Ik ben mijn telefoon kwijt.
+assistant: I have lost my phone.
+user: Spreekt u Engels?
+assistant: Do you speak English?
+user: Hoeveel kost dit?
+assistant: How much does this cost?
+user: Mijn vlucht is vertraagd.
+assistant: My flight is delayed.
+user: I am allergic to peanuts.
+assistant: Ik ben allergisch voor pinda's.
+user: Heeft u een tafel voor twee?
+assistant: Do you have a table for two?
+user: Ik begrijp het niet.
+assistant: I don't understand.
+user: Kunt u dat herhalen?
+assistant: Could you repeat that?
+user: Waar is de dichtstbijzijnde geldautomaat?
+assistant: Where is the nearest ATM?
+user: Ik wil graag naar het museum.
+assistant: I would like to go to the museum.
+user: Can I pay with a credit card?
+assistant: Kan ik met creditcard betalen?
+user: How do I say "thank you" in Dutch?
+assistant: Hoe zeg ik "dank je" in het Engels?
+user: Can you translate this for me into Dutch?
+assistant: Kun je dit voor mij vertalen naar het Engels?
+user: What is "good morning" in Dutch?
+assistant: Wat is "goedemorgen" in het Engels?
+user: Hoe vraag ik naar de weg in het Engels?
+assistant: How do I ask for directions in English?
+user: Can you help me order food in Dutch?
+assistant: Kun je me helpen eten te bestellen in het Engels?
+user: Wat betekent "gezellig" in het Engels?
+assistant: What does "cozy" mean in Dutch?
+user: How to say "I'm lost" in Dutch?
+assistant: Hoe zeg ik "Ik ben verdwaald" in het Engels?
+user: Kun je me leren hoe ik "Ik hou van jou" zeg in het Engels?
+assistant: Can you teach me how to say "I love you" in Dutch?
+user: What is the Dutch word for "bicycle"?
+assistant: Wat is het Nederlandse woord voor "fiets"?
+user: Hoe zeg ik "Eet smakelijk" in het Engels?
+assistant: How do I say "Enjoy your meal" in Dutch?
+user: Can you translate this recipe for me?
+assistant: Kun je dit recept voor mij vertalen?
+user: Hoe vraag ik om de weg naar het station?
+assistant: How do I ask for directions to the train station?
+user: What is the best way to say 'good morning'?
+assistant: Wat is de beste manier om 'goedemorgen' te zeggen?
