@@ -2,6 +2,8 @@ package server
 
 import (
 	"fmt"
+	auth "language-learning-bot/pkg/oauth2"
+	"language-learning-bot/pkg/user"
 	"log"
 	"net/http"
 	"os"
@@ -15,8 +17,9 @@ func StartServer() {
 	if err != nil {
 		log.Printf("Error loading .env file: %v\n", err)
 	}
-	r := Routes()
+	r := apiv1Routes()
 
+	// scheme := os.Getenv("LANGEKKO_SCHEME")
 	addr := os.Getenv("LANGEKKO_ADDR")
 	port := os.Getenv("LANGEKKO_PORT")
 	serverAddr := fmt.Sprintf("%s:%s", addr, port)
@@ -28,19 +31,22 @@ func StartServer() {
 	}
 }
 
+func loggingMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		log.Printf("Request: %s %s", r.Method, r.URL.Path)
+		next.ServeHTTP(w, r)
+	})
+}
+
 // define mux routes
-func Routes() *mux.Router {
+func apiv1Routes() *mux.Router {
 	r := mux.NewRouter()
-	r.HandleFunc("/", HomeHandler)
-	r.HandleFunc("/language", LanguageHandler)
+	r.Use(loggingMiddleware)
+	v1 := r.PathPrefix("/api/v1").Subrouter()
+	userRouter := user.NewRouter()
+	authRouter := auth.NewRouter()
+	v1.PathPrefix("/user").Handler(http.StripPrefix("/api/v1/user", userRouter))
+	v1.PathPrefix("/auth").Handler(http.StripPrefix("/api/v1/auth", authRouter))
 	http.Handle("/", r)
 	return r
-}
-
-func HomeHandler(w http.ResponseWriter, r *http.Request) {
-
-}
-
-func LanguageHandler(w http.ResponseWriter, r *http.Request) {
-
 }
