@@ -42,11 +42,10 @@ func loggingMiddleware(next http.Handler) http.Handler {
 func apiv1Routes() *mux.Router {
 	r := mux.NewRouter()
 	r.Use(loggingMiddleware)
-	v1 := r.PathPrefix("/api/v1").Subrouter()
 	userRouter := user.NewRouter()
 	authRouter := auth.NewRouter()
-	v1.PathPrefix("/user").Handler(http.StripPrefix("/api/v1/user", userRouter))
-	v1.PathPrefix("/auth").Handler(http.StripPrefix("/api/v1/auth", authRouter))
+	r.PathPrefix("/user").Handler(http.StripPrefix("/user", userRouter))
+	r.PathPrefix("/auth").Handler(http.StripPrefix("/auth", authRouter))
 	http.Handle("/", r)
 	return r
 }
