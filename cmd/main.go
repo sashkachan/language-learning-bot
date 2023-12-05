@@ -1,7 +1,6 @@
 package main
 
 import (
-	"language-learning-bot/cmd/server"
 	"language-learning-bot/cmd/telegram"
 
 	"github.com/spf13/cobra"
@@ -23,17 +22,8 @@ var telegramCmd = &cobra.Command{
 	},
 }
 
-var serverCmd = &cobra.Command{
-	Use:   "server",
-	Short: "Run langekko as a server",
-	Run: func(cmd *cobra.Command, args []string) {
-		server.StartServer()
-	},
-}
-
 func Execute() {
 	rootCmd.AddCommand(telegramCmd)
-	rootCmd.AddCommand(serverCmd)
 	rootCmd.Execute()
 }
 
