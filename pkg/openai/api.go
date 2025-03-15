@@ -28,7 +28,7 @@ func GetGPTResponse(ctx context.Context, openaiClient *openai.Client, req GPTReq
 	})
 
 	resp, err := openaiClient.CreateChatCompletion(ctx, openai.ChatCompletionRequest{
-		Model:    openai.GPT3Dot5Turbo16K0613,
+		Model:    openai.GPT4o,
 		Messages: promptAndMessages,
 	})
 
