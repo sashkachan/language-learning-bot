@@ -33,6 +33,7 @@ func StartTelegramBot() {
 		tgbotapi.BotCommand{Command: "examples", Description: "Provide 3-4 examples of a word or a phrase"},
 		tgbotapi.BotCommand{Command: "pronunciation", Description: "Pronounce a word or a phrase"},
 		tgbotapi.BotCommand{Command: "speech_speed", Description: "Set speech speed"},
+		tgbotapi.BotCommand{Command: "healthz", Description: "Check service health status"},
 	)
 
 	_, err = tgbot.Request(tgbotConfig)

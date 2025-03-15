@@ -24,6 +24,8 @@ func HandleCommand(ctx context.Context, bot *tgbotapi.BotAPI, message *tgbotapi.
 	log.Printf("%d [%s] %s", message.From.ID, message.From.UserName, message.Text)
 	response := ""
 	switch message.Command() {
+	case "healthz":
+		response = "OK"
 	case "start":
 		if err := sendLanguageSelection(bot, message.Chat.ID); err != nil {
 			log.Printf("Error sending language selection: %v\n", err)
